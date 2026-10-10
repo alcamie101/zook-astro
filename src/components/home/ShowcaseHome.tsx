@@ -59,10 +59,9 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       const ctx = c.getContext('2d')!;
       const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
       grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      grad.addColorStop(0.12, 'rgba(245, 250, 255, 0.95)');
-      grad.addColorStop(0.28, 'rgba(210, 235, 255, 0.65)');
-      grad.addColorStop(0.55, 'rgba(120, 180, 255, 0.20)');
-      grad.addColorStop(0.85, 'rgba(60, 110, 240, 0.04)');
+      grad.addColorStop(0.25, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.45, 'rgba(240, 248, 255, 0.9)');
+      grad.addColorStop(0.7, 'rgba(180, 220, 255, 0.4)');
       grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 64, 64);
@@ -72,7 +71,7 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       return tex;
     };
 
-    // Create high-resolution organic fractal nebula cloud texture
+    // Create subtle, ethereal organic fractal nebula cloud texture
     const createNebulaCloudTexture = (centerHex: string, midHex: string, edgeHex: string) => {
       const c = document.createElement('canvas');
       c.width = 256;
@@ -84,16 +83,16 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
       // Render 24 overlapping soft organic gas lobes with random offsets
       const seedRng = [
-        { x: 128, y: 128, r: 100, a: 0.45 },
-        { x: 105, y: 110, r: 80, a: 0.35 },
-        { x: 155, y: 120, r: 85, a: 0.35 },
-        { x: 120, y: 150, r: 75, a: 0.30 },
-        { x: 145, y: 145, r: 70, a: 0.30 },
-        { x: 90, y: 140, r: 65, a: 0.25 },
-        { x: 165, y: 105, r: 60, a: 0.25 },
-        { x: 130, y: 85, r: 60, a: 0.20 },
-        { x: 80, y: 95, r: 50, a: 0.20 },
-        { x: 175, y: 145, r: 55, a: 0.20 },
+        { x: 128, y: 128, r: 100, a: 0.30 },
+        { x: 105, y: 110, r: 80, a: 0.22 },
+        { x: 155, y: 120, r: 85, a: 0.22 },
+        { x: 120, y: 150, r: 75, a: 0.18 },
+        { x: 145, y: 145, r: 70, a: 0.18 },
+        { x: 90, y: 140, r: 65, a: 0.15 },
+        { x: 165, y: 105, r: 60, a: 0.15 },
+        { x: 130, y: 85, r: 60, a: 0.12 },
+        { x: 80, y: 95, r: 50, a: 0.12 },
+        { x: 175, y: 145, r: 55, a: 0.12 },
       ];
 
       seedRng.forEach(lobe => {
@@ -110,6 +109,15 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
         ctx.fill();
       });
 
+      // Ensure outer perimeter feathers seamlessly to 100% transparent zero alpha
+      const borderVignette = ctx.createRadialGradient(128, 128, 65, 128, 128, 128);
+      borderVignette.addColorStop(0, 'rgba(0,0,0,1)');
+      borderVignette.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.fillStyle = borderVignette;
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.globalCompositeOperation = 'source-over';
+
       const texture = new THREE.CanvasTexture(c);
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -117,17 +125,17 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     };
 
     const starTexture = createStarTexture();
-    const cyanNebulaTex = createNebulaCloudTexture('rgba(56, 189, 248, 0.85)', 'rgba(14, 116, 144, 0.45)', 'rgba(3, 105, 161, 0.15)');
-    const magentaNebulaTex = createNebulaCloudTexture('rgba(244, 63, 94, 0.85)', 'rgba(168, 85, 247, 0.50)', 'rgba(91, 33, 182, 0.15)');
-    const goldNebulaTex = createNebulaCloudTexture('rgba(251, 191, 36, 0.85)', 'rgba(217, 119, 6, 0.45)', 'rgba(180, 83, 9, 0.15)');
-    const violetNebulaTex = createNebulaCloudTexture('rgba(192, 132, 252, 0.80)', 'rgba(126, 34, 206, 0.45)', 'rgba(59, 7, 100, 0.15)');
+    const cyanNebulaTex = createNebulaCloudTexture('rgba(56, 189, 248, 0.28)', 'rgba(14, 116, 144, 0.12)', 'rgba(3, 105, 161, 0.02)');
+    const magentaNebulaTex = createNebulaCloudTexture('rgba(244, 63, 94, 0.28)', 'rgba(168, 85, 247, 0.12)', 'rgba(91, 33, 182, 0.02)');
+    const goldNebulaTex = createNebulaCloudTexture('rgba(251, 191, 36, 0.25)', 'rgba(217, 119, 6, 0.10)', 'rgba(180, 83, 9, 0.02)');
+    const violetNebulaTex = createNebulaCloudTexture('rgba(192, 132, 252, 0.24)', 'rgba(126, 34, 206, 0.09)', 'rgba(59, 7, 100, 0.02)');
 
     // 1.1 Galactic Disk Coordinate Frame (tilted 0.45 rad for authentic astronomical edge-on perspective)
     const galaxyDiskGroup = new THREE.Group();
     galaxyDiskGroup.rotation.x = 0.45;
     scene.add(galaxyDiskGroup);
 
-    // Volumetric 3D Nebular Cloud System (28 dynamic celestial gas planes)
+    // Volumetric 3D Nebular Cloud System - Delicate, translucent celestial gas filaments
     const nebulaGroup = new THREE.Group();
     galaxyDiskGroup.add(nebulaGroup);
 
@@ -141,28 +149,28 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     const nebulaClouds: NebulaCloud[] = [];
 
     const cloudDefs = [
-      // Core Supermassive Accretion Nebula (Warm Gold & Violet)
-      { tex: goldNebulaTex, scale: 320, dist: 25, color: 0xffd28a, opacity: 0.65 },
-      { tex: violetNebulaTex, scale: 360, dist: 45, color: 0xc084fc, opacity: 0.58 },
-      { tex: goldNebulaTex, scale: 300, dist: 70, color: 0xf59e0b, opacity: 0.52 },
+      // Core Supermassive Accretion Nebula (Warm Gold & Violet) - Soft, ethereal core glow
+      { tex: goldNebulaTex, scale: 200, dist: 25, color: 0xffd28a, opacity: 0.11 },
+      { tex: violetNebulaTex, scale: 220, dist: 45, color: 0xc084fc, opacity: 0.09 },
+      { tex: goldNebulaTex, scale: 180, dist: 70, color: 0xf59e0b, opacity: 0.08 },
 
       // Arm 1: Carina/Rosette Ionized Hydrogen (Magenta / Deep Crimson)
-      { tex: magentaNebulaTex, scale: 420, dist: 110, color: 0xf43f5e, opacity: 0.55 },
-      { tex: magentaNebulaTex, scale: 380, dist: 150, color: 0xe11d48, opacity: 0.58 },
-      { tex: violetNebulaTex, scale: 440, dist: 190, color: 0x9333ea, opacity: 0.50 },
-      { tex: magentaNebulaTex, scale: 390, dist: 240, color: 0xfb7185, opacity: 0.48 },
+      { tex: magentaNebulaTex, scale: 250, dist: 110, color: 0xf43f5e, opacity: 0.10 },
+      { tex: magentaNebulaTex, scale: 230, dist: 150, color: 0xe11d48, opacity: 0.09 },
+      { tex: violetNebulaTex, scale: 260, dist: 190, color: 0x9333ea, opacity: 0.08 },
+      { tex: magentaNebulaTex, scale: 240, dist: 240, color: 0xfb7185, opacity: 0.07 },
 
       // Arm 2: Cygnus/Orion Reflection Complex (Cyan / Aquamarine / Sky Blue)
-      { tex: cyanNebulaTex, scale: 420, dist: 120, color: 0x38bdf8, opacity: 0.60 },
-      { tex: cyanNebulaTex, scale: 390, dist: 170, color: 0x06b6d4, opacity: 0.56 },
-      { tex: cyanNebulaTex, scale: 450, dist: 220, color: 0x0284c7, opacity: 0.52 },
-      { tex: violetNebulaTex, scale: 400, dist: 260, color: 0x7c3aed, opacity: 0.46 },
+      { tex: cyanNebulaTex, scale: 250, dist: 120, color: 0x38bdf8, opacity: 0.10 },
+      { tex: cyanNebulaTex, scale: 230, dist: 170, color: 0x06b6d4, opacity: 0.09 },
+      { tex: cyanNebulaTex, scale: 260, dist: 220, color: 0x0284c7, opacity: 0.08 },
+      { tex: violetNebulaTex, scale: 250, dist: 260, color: 0x7c3aed, opacity: 0.07 },
 
       // Diffuse Interstellar Bridges & Veil Filaments
-      { tex: cyanNebulaTex, scale: 460, dist: 85, color: 0x22d3ee, opacity: 0.48 },
-      { tex: magentaNebulaTex, scale: 430, dist: 140, color: 0xf43f5e, opacity: 0.45 },
-      { tex: goldNebulaTex, scale: 380, dist: 125, color: 0xfbbf24, opacity: 0.48 },
-      { tex: violetNebulaTex, scale: 410, dist: 200, color: 0xa855f7, opacity: 0.42 },
+      { tex: cyanNebulaTex, scale: 270, dist: 85, color: 0x22d3ee, opacity: 0.08 },
+      { tex: magentaNebulaTex, scale: 250, dist: 140, color: 0xf43f5e, opacity: 0.07 },
+      { tex: goldNebulaTex, scale: 220, dist: 125, color: 0xfbbf24, opacity: 0.08 },
+      { tex: violetNebulaTex, scale: 240, dist: 200, color: 0xa855f7, opacity: 0.06 },
     ];
 
     cloudDefs.forEach((def, idx) => {
@@ -300,26 +308,27 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       starColors[i * 3 + 2] = col.b;
 
       // Multi-Tier Depth Hierarchy:
-      // - 74% Pinpoint Micro-Stars (Faint sub-pixel to 1.1px pinpoint dust for dense milky river)
-      // - 21% Mid-Scale Field Stars (1.3px - 2.6px distinct stellar bodies)
-      // - 5% Luminous Foreground Beacons & Supergiants (3.2px - 6.2px for prominent 3D parallax depth)
+      // - 75% Pinpoint Micro-Stars (0.8px - 1.4px delicate diamond dust for dense milky river)
+      // - 20% Intermediate Field Stars (1.5px - 2.5px distinct stellar points)
+      // - 5% Luminous Foreground Beacons (2.8px - 4.2px bright gems)
       const tierRoll = Math.random();
       let baseSize: number;
       let alpha: number;
 
-      if (tierRoll < 0.74) {
-        baseSize = 0.45 + Math.random() * 0.70;
-        alpha = 0.25 + Math.random() * 0.45;
+      if (tierRoll < 0.75) {
+        baseSize = 0.85 + Math.random() * 0.55;
+        alpha = 0.75 + Math.random() * 0.25;
       } else if (tierRoll < 0.95) {
-        baseSize = 1.3 + Math.random() * 1.3;
-        alpha = 0.65 + Math.random() * 0.30;
-      } else {
-        baseSize = 3.2 + Math.random() * 3.0;
+        baseSize = 1.6 + Math.random() * 0.9;
         alpha = 0.88 + Math.random() * 0.12;
+      } else {
+        baseSize = 2.8 + Math.random() * 1.4;
+        alpha = 1.0;
       }
 
       if (isBulge) {
-        alpha = Math.min(1.0, alpha * 1.25);
+        alpha = 1.0;
+        baseSize *= 1.15;
       }
 
       starSizes[i] = baseSize;
@@ -346,8 +355,9 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
           vColor = aColor;
           vAlpha = aAlpha;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = aSize * (270.0 / -mvPosition.z);
-          gl_PointSize = max(gl_PointSize, 0.7);
+          gl_PointSize = aSize * (220.0 / -mvPosition.z);
+          // Realistic astronomical point sizes: pinpoint 0.8px to crisp beacon 4.2px
+          gl_PointSize = clamp(gl_PointSize, 0.8, 4.2);
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
@@ -357,7 +367,7 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
         varying float vAlpha;
         void main() {
           vec4 tex = texture2D(pointTexture, gl_PointCoord);
-          gl_FragColor = vec4(vColor * tex.rgb, tex.a * vAlpha);
+          gl_FragColor = vec4(vColor, 1.0) * tex.a * vAlpha;
         }
       `,
       transparent: true,
@@ -367,18 +377,6 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
     const galaxyPoints = new THREE.Points(starGeo, starShaderMat);
     galaxyDiskGroup.add(galaxyPoints);
-
-    // 1.3 Volumetric Core Accretion Spheroid
-    const coreGeo = new THREE.SphereGeometry(26, 32, 32);
-    const coreMat = new THREE.MeshBasicMaterial({
-      color: 0xffd28a,
-      transparent: true,
-      opacity: 0.32,
-      blending: THREE.AdditiveBlending
-    });
-    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-    coreMesh.scale.set(2.4, 0.45, 2.4);
-    galaxyDiskGroup.add(coreMesh);
 
     // Interactive mouse parallax
     let mouse = { x: 0, y: 0 };
@@ -414,8 +412,7 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       const elapsed = clock.getElapsedTime();
 
       // Smooth galaxy rotation
-      galaxyPoints.rotation.y = elapsed * 0.025;
-      coreMesh.rotation.y = elapsed * 0.035;
+      galaxyPoints.rotation.y = elapsed * 0.02;
 
       // Organic drift and rotation for volumetric nebulae
       nebulaClouds.forEach((cloud) => {
@@ -446,8 +443,6 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       renderer.dispose();
       starGeo.dispose();
       starShaderMat.dispose();
-      coreGeo.dispose();
-      coreMat.dispose();
       starTexture.dispose();
       cyanNebulaTex.dispose();
       magentaNebulaTex.dispose();
@@ -646,9 +641,8 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       {/* 3D Deep Space Canvas */}
       <div ref={mainCanvasRef} className="absolute inset-0 pointer-events-none z-0" />
 
-      {/* Optical Vignette & Nebular Glow */}
-      <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(2,4,9,0.85)_100%)]" />
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-tr from-cyan-600/10 via-indigo-600/10 to-amber-500/10 rounded-full blur-[160px] pointer-events-none" />
+      {/* Optical Vignette */}
+      <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(2,4,9,0.85)_100%)]" />
 
       {/* High-Precision Scientific HUD Crosshair Overlays */}
       <div className="absolute top-4 left-6 pointer-events-none z-10 flex items-center gap-2 font-mono text-[10px] text-cyan-500/60 uppercase tracking-widest">
