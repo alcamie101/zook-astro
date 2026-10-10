@@ -59,19 +59,137 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       const ctx = c.getContext('2d')!;
       const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
       grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      grad.addColorStop(0.2, 'rgba(230, 245, 255, 0.85)');
-      grad.addColorStop(0.5, 'rgba(120, 180, 255, 0.35)');
+      grad.addColorStop(0.15, 'rgba(235, 245, 255, 0.9)');
+      grad.addColorStop(0.4, 'rgba(140, 190, 255, 0.4)');
+      grad.addColorStop(0.7, 'rgba(70, 120, 255, 0.1)');
       grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    };
+
+    // Create high-resolution organic fractal nebula cloud texture
+    const createNebulaCloudTexture = (centerHex: string, midHex: string, edgeHex: string) => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d')!;
+
+      // Background transparent
+      ctx.clearRect(0, 0, 256, 256);
+
+      // Render 24 overlapping soft organic gas lobes with random offsets
+      const seedRng = [
+        { x: 128, y: 128, r: 100, a: 0.45 },
+        { x: 105, y: 110, r: 80, a: 0.35 },
+        { x: 155, y: 120, r: 85, a: 0.35 },
+        { x: 120, y: 150, r: 75, a: 0.30 },
+        { x: 145, y: 145, r: 70, a: 0.30 },
+        { x: 90, y: 140, r: 65, a: 0.25 },
+        { x: 165, y: 105, r: 60, a: 0.25 },
+        { x: 130, y: 85, r: 60, a: 0.20 },
+        { x: 80, y: 95, r: 50, a: 0.20 },
+        { x: 175, y: 145, r: 55, a: 0.20 },
+      ];
+
+      seedRng.forEach(lobe => {
+        const grad = ctx.createRadialGradient(lobe.x, lobe.y, 0, lobe.x, lobe.y, lobe.r);
+        grad.addColorStop(0, centerHex);
+        grad.addColorStop(0.4, midHex);
+        grad.addColorStop(0.8, edgeHex);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+        ctx.globalAlpha = lobe.a;
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(lobe.x, lobe.y, lobe.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
       const texture = new THREE.CanvasTexture(c);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
       return texture;
     };
 
     const starTexture = createStarTexture();
+    const cyanNebulaTex = createNebulaCloudTexture('rgba(56, 189, 248, 0.85)', 'rgba(14, 116, 144, 0.45)', 'rgba(3, 105, 161, 0.15)');
+    const magentaNebulaTex = createNebulaCloudTexture('rgba(244, 63, 94, 0.85)', 'rgba(168, 85, 247, 0.50)', 'rgba(91, 33, 182, 0.15)');
+    const goldNebulaTex = createNebulaCloudTexture('rgba(251, 191, 36, 0.85)', 'rgba(217, 119, 6, 0.45)', 'rgba(180, 83, 9, 0.15)');
+    const violetNebulaTex = createNebulaCloudTexture('rgba(192, 132, 252, 0.80)', 'rgba(126, 34, 206, 0.45)', 'rgba(59, 7, 100, 0.15)');
 
-    // 1.1 Spiral Galaxy Dust & Star Clusters (4,500 particles)
-    const starCount = 4500;
+    // 1.1 Volumetric 3D Nebular Cloud System (28 dynamic celestial gas planes)
+    const nebulaGroup = new THREE.Group();
+    nebulaGroup.rotation.x = 0.45; // Exactly matches galaxy tilt
+    scene.add(nebulaGroup);
+
+    interface NebulaCloud {
+      mesh: THREE.Mesh;
+      baseRotSpeed: number;
+      orbitSpeed: number;
+      orbitRadius: number;
+      orbitAngle: number;
+    }
+    const nebulaClouds: NebulaCloud[] = [];
+
+    const cloudDefs = [
+      // Core Supermassive Accretion Nebula (Warm Gold & Violet)
+      { tex: goldNebulaTex, scale: 320, dist: 25, color: 0xffd28a, opacity: 0.65 },
+      { tex: violetNebulaTex, scale: 360, dist: 45, color: 0xc084fc, opacity: 0.58 },
+      { tex: goldNebulaTex, scale: 300, dist: 70, color: 0xf59e0b, opacity: 0.52 },
+
+      // Arm 1: Carina/Rosette Ionized Hydrogen (Magenta / Deep Crimson)
+      { tex: magentaNebulaTex, scale: 420, dist: 110, color: 0xf43f5e, opacity: 0.55 },
+      { tex: magentaNebulaTex, scale: 380, dist: 150, color: 0xe11d48, opacity: 0.58 },
+      { tex: violetNebulaTex, scale: 440, dist: 190, color: 0x9333ea, opacity: 0.50 },
+      { tex: magentaNebulaTex, scale: 390, dist: 240, color: 0xfb7185, opacity: 0.48 },
+
+      // Arm 2: Cygnus/Orion Reflection Complex (Cyan / Aquamarine / Sky Blue)
+      { tex: cyanNebulaTex, scale: 420, dist: 120, color: 0x38bdf8, opacity: 0.60 },
+      { tex: cyanNebulaTex, scale: 390, dist: 170, color: 0x06b6d4, opacity: 0.56 },
+      { tex: cyanNebulaTex, scale: 450, dist: 220, color: 0x0284c7, opacity: 0.52 },
+      { tex: violetNebulaTex, scale: 400, dist: 260, color: 0x7c3aed, opacity: 0.46 },
+
+      // Diffuse Interstellar Bridges & Veil Filaments
+      { tex: cyanNebulaTex, scale: 460, dist: 85, color: 0x22d3ee, opacity: 0.48 },
+      { tex: magentaNebulaTex, scale: 430, dist: 140, color: 0xf43f5e, opacity: 0.45 },
+      { tex: goldNebulaTex, scale: 380, dist: 125, color: 0xfbbf24, opacity: 0.48 },
+      { tex: violetNebulaTex, scale: 410, dist: 200, color: 0xa855f7, opacity: 0.42 },
+    ];
+
+    cloudDefs.forEach((def, idx) => {
+      const mat = new THREE.MeshBasicMaterial({
+        map: def.tex,
+        color: new THREE.Color(def.color),
+        transparent: true,
+        opacity: def.opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(def.scale, def.scale), mat);
+      const angle = (idx / cloudDefs.length) * Math.PI * 2 + (idx % 2 ? 0.35 : 0);
+      const x = Math.cos(angle) * def.dist;
+      const z = Math.sin(angle) * def.dist;
+      const y = (Math.random() - 0.5) * 20;
+
+      plane.position.set(x, y, z);
+      plane.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
+      plane.rotation.z = Math.random() * Math.PI * 2;
+      nebulaGroup.add(plane);
+
+      nebulaClouds.push({
+        mesh: plane,
+        baseRotSpeed: (Math.random() - 0.5) * 0.003,
+        orbitSpeed: 0.008 / (1 + def.dist * 0.01),
+        orbitRadius: def.dist,
+        orbitAngle: angle
+      });
+    });
+
+    // 1.2 Ultra-High-Resolution Spiral Galaxy Dust & Starfield (9,500 particles)
+    const starCount = 9500;
     const starGeo = new THREE.BufferGeometry();
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
@@ -80,31 +198,43 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     const arms = 2;
     for (let i = 0; i < starCount; i++) {
       const arm = (i % arms) * ((Math.PI * 2) / arms);
-      const dist = Math.pow(Math.random(), 0.55) * 320;
-      const angle = dist * 0.015 + arm + (Math.random() - 0.5) * 0.5;
-      const spread = (Math.random() - 0.5) * (18 + dist * 0.12);
+      const dist = Math.pow(Math.random(), 0.55) * 350;
+      const angle = dist * 0.015 + arm + (Math.random() - 0.5) * 0.45;
+      const spread = (Math.random() - 0.5) * (14 + dist * 0.10);
 
-      const x = Math.cos(angle) * dist + (Math.random() - 0.5) * 15;
-      const z = Math.sin(angle) * dist + (Math.random() - 0.5) * 15;
-      const y = (Math.random() - 0.5) * (20 * Math.exp(-dist / 160)) + spread * 0.4;
+      const x = Math.cos(angle) * dist + (Math.random() - 0.5) * 12;
+      const z = Math.sin(angle) * dist + (Math.random() - 0.5) * 12;
+      const y = (Math.random() - 0.5) * (18 * Math.exp(-dist / 180)) + spread * 0.35;
 
       starPositions[i * 3] = x;
       starPositions[i * 3 + 1] = y;
       starPositions[i * 3 + 2] = z;
 
-      // Realistic spectral colors: Core (Warm Gold / Solar) -> Disks (Azure, Sky Blue, Brilliant White)
-      const t = Math.min(1, dist / 280);
-      const col = new THREE.Color().lerpColors(
-        new THREE.Color(0xffe4b5),
-        new THREE.Color(0x38bdf8),
-        t + (Math.random() - 0.5) * 0.2
-      );
-      if (Math.random() < 0.08) col.set(0xfb7185); // H-II Red Emission Regions
+      // Photometric spectral colors matching astrophysical temperatures
+      let col: THREE.Color;
+
+      const pType = Math.random();
+      if (pType < 0.12) {
+        col = new THREE.Color(0xf43f5e); // H-II Ionization Pink/Crimson
+      } else if (pType < 0.35) {
+        col = new THREE.Color(0x38bdf8); // Young O/B Blue Stars
+      } else if (pType < 0.65) {
+        col = new THREE.Color(0xffffff); // Luminous A/F White Stars
+      } else if (pType < 0.85) {
+        col = new THREE.Color(0xfef08a); // Solar Analogs G-Class
+      } else {
+        col = new THREE.Color(0xfb923c); // Orange/Red Dwarfs K/M
+      }
+
+      // Center shifts toward incandescent warm gold
+      if (dist < 40) {
+        col.lerp(new THREE.Color(0xffedd5), 0.7);
+      }
 
       starColors[i * 3] = col.r;
       starColors[i * 3 + 1] = col.g;
       starColors[i * 3 + 2] = col.b;
-      starSizes[i] = 1.2 + Math.random() * 2.8;
+      starSizes[i] = 0.8 + Math.random() * 2.6;
     }
 
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
@@ -112,11 +242,11 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
 
     const starMat = new THREE.PointsMaterial({
-      size: 3.5,
+      size: 2.8,
       map: starTexture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.90,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -124,17 +254,17 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     galaxyPoints.rotation.x = 0.45;
     scene.add(galaxyPoints);
 
-    // 1.2 Volumetric Glowing Galactic Core (Sagittarius A* Accretion Glow)
+    // 1.3 Volumetric Core Accretion Sphere
     const coreMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(24, 32, 32),
+      new THREE.SphereGeometry(28, 32, 32),
       new THREE.MeshBasicMaterial({
         color: 0xffd28a,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.32,
         blending: THREE.AdditiveBlending
       })
     );
-    coreMesh.scale.set(2.2, 0.4, 2.2);
+    coreMesh.scale.set(2.4, 0.45, 2.4);
     coreMesh.rotation.x = 0.45;
     scene.add(coreMesh);
 
@@ -175,6 +305,14 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       galaxyPoints.rotation.y = elapsed * 0.025;
       coreMesh.rotation.y = elapsed * 0.035;
 
+      // Organic drift and rotation for volumetric nebulae
+      nebulaClouds.forEach((cloud) => {
+        cloud.orbitAngle += cloud.orbitSpeed * 0.02;
+        cloud.mesh.position.x = Math.cos(cloud.orbitAngle) * cloud.orbitRadius;
+        cloud.mesh.position.z = Math.sin(cloud.orbitAngle) * cloud.orbitRadius;
+        cloud.mesh.rotation.z += cloud.baseRotSpeed;
+      });
+
       // Smooth camera interpolation
       camera.position.x += (targetCamera.x - camera.position.x) * 0.04;
       camera.position.y += (targetCamera.y - camera.position.y) * 0.04;
@@ -195,6 +333,10 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       }
       renderer.dispose();
       starTexture.dispose();
+      cyanNebulaTex.dispose();
+      magentaNebulaTex.dispose();
+      goldNebulaTex.dispose();
+      violetNebulaTex.dispose();
     };
   }, []);
 
