@@ -204,14 +204,36 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       });
     });
 
-    // 1.2 Ultra-Dense Multi-Tier Milky Way Starfield (68,000 particles)
-    // Combines pinpoint micro-dust, intermediate field stars, and luminous foreground beacons
-    const starCount = 68000;
+    // 1.2 Ultra-Dense High-Fidelity Milky Way Starfield (180,000 particles)
+    // Features 14 dense star clusters (open clusters, globulars, and H-II starburst nurseries)
+    // plus dense galactic bulge and tightly focused spiral arm spines
+    const starCount = 180000;
     const starGeo = new THREE.BufferGeometry();
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
     const starAlphas = new Float32Array(starCount);
+
+    // 14 Dense Stellar Clusters (Globular clusters, Pleiades-style open clusters, and Carina/Orion nurseries)
+    const denseClusters = [
+      // Core & Near-Bulge Globular Clusters & Sagittarius Star Clouds
+      { x: 18, z: 12, r: 14, col: 0xffedd5 },
+      { x: -18, z: -14, r: 12, col: 0xfef08a },
+      { x: 28, z: -22, r: 15, col: 0xfcd34d },
+      { x: -25, z: 20, r: 14, col: 0xffedd5 },
+      // Carina & Orion Open Clusters / Bright Blue Supergiant swarms
+      { x: 78, z: 58, r: 18, col: 0x38bdf8 },
+      { x: -82, z: -62, r: 17, col: 0x60a5fa },
+      { x: 128, z: -88, r: 20, col: 0x38bdf8 },
+      { x: -122, z: 102, r: 19, col: 0x93c5fd },
+      // Perseus Double Cluster & H-II Nursery Knots
+      { x: 62, z: -118, r: 15, col: 0xf43f5e },
+      { x: -68, z: 128, r: 16, col: 0xf43f5e },
+      { x: 158, z: 78, r: 22, col: 0xffffff },
+      { x: -162, z: -72, r: 20, col: 0xfef08a },
+      { x: 192, z: -32, r: 22, col: 0x38bdf8 },
+      { x: -188, z: 42, r: 20, col: 0x60a5fa }
+    ];
 
     for (let i = 0; i < starCount; i++) {
       let x = 0, y = 0, z = 0;
@@ -220,17 +242,32 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
       const sectorRoll = Math.random();
 
-      if (sectorRoll < 0.22) {
-        // [ZONE A] Galactic Bulge & Central Sgr A* Bar (~22% of stars)
-        // High central density, slight bar elongation, warm Population II stars
+      if (sectorRoll < 0.25) {
+        // [ZONE 0] Dense Star Clusters & Stellar Nurseries (~25% of stars / 45,000 particles)
+        // High localized density with Gaussian falloff, creating visible clusters
+        const cl = denseClusters[i % denseClusters.length];
+        const offset = Math.pow(Math.random(), 1.7) * cl.r;
+        const angle = Math.random() * Math.PI * 2;
+
+        x = cl.x + Math.cos(angle) * offset;
+        z = cl.z + Math.sin(angle) * offset;
+        y = (Math.random() - 0.5) * (cl.r * 0.45 * Math.exp(-offset / cl.r));
+
+        col.setHex(cl.col);
+        if (Math.random() < 0.25) {
+          col.lerp(new THREE.Color(0xffffff), 0.5);
+        }
+      } else if (sectorRoll < 0.50) {
+        // [ZONE A] Galactic Bulge & Central Sgr A* Nucleus (~25% of stars / 45,000 particles)
+        // Packed central stellar core with warm Population II golden/amber stars
         isBulge = true;
-        const dist = Math.pow(Math.random(), 1.5) * 52;
+        const dist = Math.pow(Math.random(), 1.7) * 48;
         const angle = Math.random() * Math.PI * 2;
         const barStretch = 1.35;
 
         x = (Math.cos(angle) * dist) * barStretch;
         z = Math.sin(angle) * dist;
-        y = (Math.random() - 0.5) * (18 * Math.exp(-dist / 32));
+        y = (Math.random() - 0.5) * (15 * Math.exp(-dist / 28));
 
         const rType = Math.random();
         if (rType < 0.42) {
@@ -241,29 +278,29 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
           col.setHex(0xfb923c); // K-Class Orange Giant
         }
 
-        if (dist < 18) {
-          col.lerp(new THREE.Color(0xfff7ed), 0.70); // Incandescent galactic nucleus
+        if (dist < 16) {
+          col.lerp(new THREE.Color(0xfff7ed), 0.75); // Radiant central core
         }
-      } else if (sectorRoll < 0.77) {
-        // [ZONE B] The 4 Logarithmic Spiral Arms of the Milky Way (~55% of stars)
-        // (Perseus, Scutum-Centaurus, Sagittarius-Carina, Outer/Norma)
+      } else if (sectorRoll < 0.88) {
+        // [ZONE B] The 4 Logarithmic Spiral Arm Spines of the Milky Way (~38% of stars / ~68,000 particles)
+        // Tightly focused stellar arms (Perseus, Scutum-Centaurus, Sagittarius-Carina, Outer)
         const armIdx = i % 4;
         const armBase = armIdx * (Math.PI / 2);
-        const dist = 20 + Math.pow(Math.random(), 0.62) * 380;
+        const dist = 18 + Math.pow(Math.random(), 0.65) * 360;
 
-        // Logarithmic spiral pitch
+        // Logarithmic spiral pitch with tight Gaussian arm spine
         const spiralAngle = Math.log(dist / 16) * 2.1 + armBase;
-        const dispersion = (Math.random() - 0.5) * (0.22 + dist * 0.0006);
+        const dispersion = (Math.random() - 0.5) * (0.16 + dist * 0.0004);
         const angle = spiralAngle + dispersion;
 
-        const rScatter = (Math.random() - 0.5) * (8 + dist * 0.08);
+        const rScatter = (Math.random() - 0.5) * (6 + dist * 0.06);
         const r = Math.max(8, dist + rScatter);
 
         x = Math.cos(angle) * r;
         z = Math.sin(angle) * r;
 
         // Milky Way Thin Disk exponential scale height
-        const scaleHeight = 4.2 * Math.exp(-r / 200) + 1.5;
+        const scaleHeight = 3.8 * Math.exp(-r / 200) + 1.4;
         y = (Math.random() - 0.5) * scaleHeight * 2;
 
         // Spiral arm stellar photometry (OBAFGKM + H-II Starbursts)
@@ -280,19 +317,19 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
           col.setHex(0xfb923c); // K/M Dwarfs (Warm Orange)
         }
       } else {
-        // [ZONE C] Diffuse Inter-Arm Disk & Outer Galactic Halo (~23% of stars)
-        // Creates the seamless, continuous "milky" river of light across the night sky
-        const dist = 12 + Math.pow(Math.random(), 0.70) * 400;
+        // [ZONE C] Diffuse Inter-Arm Disk & Outer Galactic River (~12% of stars / ~22,000 particles)
+        // Bridges between the arms to complete the continuous milky sheen
+        const dist = 10 + Math.pow(Math.random(), 0.70) * 380;
         const angle = Math.random() * Math.PI * 2;
 
         x = Math.cos(angle) * dist;
         z = Math.sin(angle) * dist;
-        y = (Math.random() - 0.5) * (8.5 * Math.exp(-dist / 220) + 2.5);
+        y = (Math.random() - 0.5) * (7.5 * Math.exp(-dist / 220) + 2.2);
 
         const dType = Math.random();
-        if (dType < 0.50) {
+        if (dType < 0.55) {
           col.setHex(0xffffff);
-        } else if (dType < 0.80) {
+        } else if (dType < 0.82) {
           col.setHex(0xbae6fd);
         } else {
           col.setHex(0xfef08a);
@@ -308,27 +345,27 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       starColors[i * 3 + 2] = col.b;
 
       // Multi-Tier Depth Hierarchy:
-      // - 75% Pinpoint Micro-Stars (0.8px - 1.4px delicate diamond dust for dense milky river)
-      // - 20% Intermediate Field Stars (1.5px - 2.5px distinct stellar points)
+      // - 78% Pinpoint Micro-Stars (0.8px - 1.4px delicate diamond dust for dense milky river)
+      // - 17% Intermediate Field Stars (1.5px - 2.5px distinct stellar points)
       // - 5% Luminous Foreground Beacons (2.8px - 4.2px bright gems)
       const tierRoll = Math.random();
       let baseSize: number;
       let alpha: number;
 
-      if (tierRoll < 0.75) {
-        baseSize = 0.85 + Math.random() * 0.55;
+      if (tierRoll < 0.78) {
+        baseSize = 0.85 + Math.random() * 0.50;
         alpha = 0.75 + Math.random() * 0.25;
       } else if (tierRoll < 0.95) {
-        baseSize = 1.6 + Math.random() * 0.9;
+        baseSize = 1.5 + Math.random() * 0.8;
         alpha = 0.88 + Math.random() * 0.12;
       } else {
-        baseSize = 2.8 + Math.random() * 1.4;
+        baseSize = 2.6 + Math.random() * 1.3;
         alpha = 1.0;
       }
 
       if (isBulge) {
         alpha = 1.0;
-        baseSize *= 1.15;
+        baseSize *= 1.12;
       }
 
       starSizes[i] = baseSize;
