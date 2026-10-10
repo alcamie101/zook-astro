@@ -29,6 +29,22 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'instruments' | 'specs'>('overview');
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioIntervalRef = useRef<any>(null);
+  const audioNodesRef = useRef<any>(null);
+
+  // Cleanup ambient soundscape on component unmount
+  useEffect(() => {
+    return () => {
+      if (audioIntervalRef.current) {
+        clearTimeout(audioIntervalRef.current);
+      }
+      if (audioCtxRef.current) {
+        try {
+          audioCtxRef.current.close();
+        } catch {}
+      }
+    };
+  }, []);
 
   // 1. High-Precision Background 3D Deep Space Galactic Canvas
   useEffect(() => {
@@ -634,7 +650,7 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     };
   }, []);
 
-  // Ambient Synthesizer Drone
+  // Celestial Generative Ambient Soundscape Engine (Web Audio API)
   const toggleAmbientAudio = () => {
     if (isAudioMuted) {
       try {
@@ -642,32 +658,156 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
         const ctx = new AudioContextClass();
         audioCtxRef.current = ctx;
 
+        // 1. Master Compression & Soft Limiter
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-24, ctx.currentTime);
+        compressor.knee.setValueAtTime(30, ctx.currentTime);
+        compressor.ratio.setValueAtTime(12, ctx.currentTime);
+        compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+        compressor.release.setValueAtTime(0.25, ctx.currentTime);
+        compressor.connect(ctx.destination);
+
+        // 2. Master Gain with Smooth Cinematic Fade-In
         const masterGain = ctx.createGain();
-        masterGain.gain.setValueAtTime(0.035, ctx.currentTime);
-        masterGain.connect(ctx.destination);
+        masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        masterGain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 2.0);
+        masterGain.connect(compressor);
 
-        // Low binaural fundamental
-        const osc1 = ctx.createOscillator();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(55, ctx.currentTime); // 55Hz
+        // 3. Deep Space Spatial Delay / Reverb Network
+        const delay = ctx.createDelay(2.0);
+        delay.delayTime.setValueAtTime(0.52, ctx.currentTime);
 
-        const osc2 = ctx.createOscillator();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(110.4, ctx.currentTime); // 110.4Hz
+        const delayFeedback = ctx.createGain();
+        delayFeedback.gain.setValueAtTime(0.44, ctx.currentTime);
 
-        osc1.connect(masterGain);
-        osc2.connect(masterGain);
+        const delayFilter = ctx.createBiquadFilter();
+        delayFilter.type = 'lowpass';
+        delayFilter.frequency.setValueAtTime(1200, ctx.currentTime);
 
-        osc1.start();
-        osc2.start();
+        delay.connect(delayFilter);
+        delayFilter.connect(delayFeedback);
+        delayFeedback.connect(delay);
+        delayFilter.connect(masterGain);
+
+        // 4. Warm Celestial Drone Pad (D Minor / D Lydian Shimmer)
+        const padFilter = ctx.createBiquadFilter();
+        padFilter.type = 'lowpass';
+        padFilter.frequency.setValueAtTime(260, ctx.currentTime);
+        padFilter.Q.setValueAtTime(2.0, ctx.currentTime);
+        padFilter.connect(masterGain);
+        padFilter.connect(delay);
+
+        // LFO: Slow cosmic breathing filter modulation (~12s cycle)
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.08, ctx.currentTime);
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.setValueAtTime(160, ctx.currentTime);
+        lfo.connect(lfoGain);
+        lfoGain.connect(padFilter.frequency);
+        lfo.start();
+
+        // 4-voice polyphonic interstellar chord: D2 (73.4Hz), A2 (110Hz), E3 (164.8Hz), A3 (220Hz)
+        const chordPitches = [73.42, 110.00, 164.81, 220.00];
+        chordPitches.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          osc.type = idx === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+          osc.detune.setValueAtTime((Math.random() - 0.5) * 8, ctx.currentTime);
+
+          const voiceGain = ctx.createGain();
+          voiceGain.gain.setValueAtTime(idx === 0 ? 0.32 : 0.16, ctx.currentTime);
+
+          osc.connect(voiceGain);
+          voiceGain.connect(padFilter);
+          osc.start();
+        });
+
+        // 5. Interstellar Cosmic Wind (Pink-filtered noise shimmer)
+        const bufLen = ctx.sampleRate * 2;
+        const noiseBuf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+        const noiseOut = noiseBuf.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < bufLen; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          noiseOut[i] = (b0 + b1 + b2 + white * 0.05) * 0.08;
+        }
+        const noiseSrc = ctx.createBufferSource();
+        noiseSrc.buffer = noiseBuf;
+        noiseSrc.loop = true;
+
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(750, ctx.currentTime);
+        noiseFilter.Q.setValueAtTime(1.6, ctx.currentTime);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.012, ctx.currentTime);
+
+        noiseSrc.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(masterGain);
+        noiseSrc.start();
+
+        // 6. Generative Pulsar / Starlight Crystal Chimes
+        const playStarlightChime = () => {
+          if (!ctx || ctx.state === 'closed') return;
+          const now = ctx.currentTime;
+          // Celestial D Lydian pentatonic scale
+          const chimeFreqs = [293.66, 369.99, 440.00, 554.37, 587.33, 659.25, 880.00, 987.77, 1108.73];
+          const freq = chimeFreqs[Math.floor(Math.random() * chimeFreqs.length)];
+
+          const chimeOsc = ctx.createOscillator();
+          chimeOsc.type = 'sine';
+          chimeOsc.frequency.setValueAtTime(freq, now);
+
+          const chimeGain = ctx.createGain();
+          chimeGain.gain.setValueAtTime(0.0001, now);
+          chimeGain.gain.linearRampToValueAtTime(0.028, now + 0.06);
+          chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.2);
+
+          chimeOsc.connect(chimeGain);
+          chimeGain.connect(masterGain);
+          chimeGain.connect(delay); // Drenched in deep space echo
+
+          chimeOsc.start(now);
+          chimeOsc.stop(now + 4.5);
+        };
+
+        // Schedule periodic celestial chimes every 2.6 - 4.8 seconds
+        const triggerChimeLoop = () => {
+          playStarlightChime();
+          const nextInterval = 2600 + Math.random() * 2200;
+          audioIntervalRef.current = setTimeout(triggerChimeLoop, nextInterval);
+        };
+        // Initial chime after 1.5s
+        audioIntervalRef.current = setTimeout(triggerChimeLoop, 1500);
+
+        audioNodesRef.current = { ctx, masterGain };
         setIsAudioMuted(false);
       } catch (e) {
-        console.error('Audio synthesizer error', e);
+        console.error('Audio soundscape error', e);
       }
     } else {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close();
-        audioCtxRef.current = null;
+      if (audioIntervalRef.current) {
+        clearTimeout(audioIntervalRef.current);
+        audioIntervalRef.current = null;
+      }
+      if (audioNodesRef.current) {
+        const { ctx, masterGain } = audioNodesRef.current;
+        if (ctx && ctx.state !== 'closed' && masterGain) {
+          const now = ctx.currentTime;
+          masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+          masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+          setTimeout(() => {
+            try {
+              ctx.close();
+            } catch {}
+          }, 1300);
+        }
       }
       setIsAudioMuted(true);
     }
@@ -710,11 +850,11 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
         {/* Ambient Synthesizer Button */}
         <button
           onClick={toggleAmbientAudio}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-mono text-slate-300 transition-all shadow-md hover:border-cyan-500/50"
-          title="Toggle Deep Space Frequency Synthesizer"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-mono text-slate-300 transition-all shadow-md hover:border-cyan-500/50"
+          title="Toggle Deep Space Ambient Soundscape"
         >
           {isAudioMuted ? <VolumeX className="w-3.5 h-3.5 text-slate-500" /> : <Volume2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />}
-          <span>{isAudioMuted ? 'Cosmic Audio: Muted' : 'Cosmic Audio: Active'}</span>
+          <span>{isAudioMuted ? 'Cosmic Soundscape: Muted' : 'Cosmic Ambient: Live'}</span>
         </button>
       </div>
 
