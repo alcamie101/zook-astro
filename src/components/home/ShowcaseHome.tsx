@@ -51,7 +51,7 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
 
-    // Create soft circular star sprite texture programmatically
+    // Create soft circular star sprite texture programmatically with crisp optical core
     const createStarTexture = () => {
       const c = document.createElement('canvas');
       c.width = 64;
@@ -59,13 +59,17 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       const ctx = c.getContext('2d')!;
       const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
       grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      grad.addColorStop(0.15, 'rgba(235, 245, 255, 0.9)');
-      grad.addColorStop(0.4, 'rgba(140, 190, 255, 0.4)');
-      grad.addColorStop(0.7, 'rgba(70, 120, 255, 0.1)');
+      grad.addColorStop(0.12, 'rgba(245, 250, 255, 0.95)');
+      grad.addColorStop(0.28, 'rgba(210, 235, 255, 0.65)');
+      grad.addColorStop(0.55, 'rgba(120, 180, 255, 0.20)');
+      grad.addColorStop(0.85, 'rgba(60, 110, 240, 0.04)');
       grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 64, 64);
-      return new THREE.CanvasTexture(c);
+      const tex = new THREE.CanvasTexture(c);
+      tex.generateMipmaps = true;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      return tex;
     };
 
     // Create high-resolution organic fractal nebula cloud texture
@@ -118,10 +122,14 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     const goldNebulaTex = createNebulaCloudTexture('rgba(251, 191, 36, 0.85)', 'rgba(217, 119, 6, 0.45)', 'rgba(180, 83, 9, 0.15)');
     const violetNebulaTex = createNebulaCloudTexture('rgba(192, 132, 252, 0.80)', 'rgba(126, 34, 206, 0.45)', 'rgba(59, 7, 100, 0.15)');
 
-    // 1.1 Volumetric 3D Nebular Cloud System (28 dynamic celestial gas planes)
+    // 1.1 Galactic Disk Coordinate Frame (tilted 0.45 rad for authentic astronomical edge-on perspective)
+    const galaxyDiskGroup = new THREE.Group();
+    galaxyDiskGroup.rotation.x = 0.45;
+    scene.add(galaxyDiskGroup);
+
+    // Volumetric 3D Nebular Cloud System (28 dynamic celestial gas planes)
     const nebulaGroup = new THREE.Group();
-    nebulaGroup.rotation.x = 0.45; // Exactly matches galaxy tilt
-    scene.add(nebulaGroup);
+    galaxyDiskGroup.add(nebulaGroup);
 
     interface NebulaCloud {
       mesh: THREE.Mesh;
@@ -172,10 +180,10 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       const angle = (idx / cloudDefs.length) * Math.PI * 2 + (idx % 2 ? 0.35 : 0);
       const x = Math.cos(angle) * def.dist;
       const z = Math.sin(angle) * def.dist;
-      const y = (Math.random() - 0.5) * 20;
+      const y = (Math.random() - 0.5) * 16;
 
       plane.position.set(x, y, z);
-      plane.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
+      plane.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.15;
       plane.rotation.z = Math.random() * Math.PI * 2;
       nebulaGroup.add(plane);
 
@@ -188,85 +196,189 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
       });
     });
 
-    // 1.2 Ultra-High-Resolution Spiral Galaxy Dust & Starfield (9,500 particles)
-    const starCount = 9500;
+    // 1.2 Ultra-Dense Multi-Tier Milky Way Starfield (68,000 particles)
+    // Combines pinpoint micro-dust, intermediate field stars, and luminous foreground beacons
+    const starCount = 68000;
     const starGeo = new THREE.BufferGeometry();
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
     const starSizes = new Float32Array(starCount);
+    const starAlphas = new Float32Array(starCount);
 
-    const arms = 2;
     for (let i = 0; i < starCount; i++) {
-      const arm = (i % arms) * ((Math.PI * 2) / arms);
-      const dist = Math.pow(Math.random(), 0.55) * 350;
-      const angle = dist * 0.015 + arm + (Math.random() - 0.5) * 0.45;
-      const spread = (Math.random() - 0.5) * (14 + dist * 0.10);
+      let x = 0, y = 0, z = 0;
+      let col = new THREE.Color();
+      let isBulge = false;
 
-      const x = Math.cos(angle) * dist + (Math.random() - 0.5) * 12;
-      const z = Math.sin(angle) * dist + (Math.random() - 0.5) * 12;
-      const y = (Math.random() - 0.5) * (18 * Math.exp(-dist / 180)) + spread * 0.35;
+      const sectorRoll = Math.random();
+
+      if (sectorRoll < 0.22) {
+        // [ZONE A] Galactic Bulge & Central Sgr A* Bar (~22% of stars)
+        // High central density, slight bar elongation, warm Population II stars
+        isBulge = true;
+        const dist = Math.pow(Math.random(), 1.5) * 52;
+        const angle = Math.random() * Math.PI * 2;
+        const barStretch = 1.35;
+
+        x = (Math.cos(angle) * dist) * barStretch;
+        z = Math.sin(angle) * dist;
+        y = (Math.random() - 0.5) * (18 * Math.exp(-dist / 32));
+
+        const rType = Math.random();
+        if (rType < 0.42) {
+          col.setHex(0xfef08a); // G-Class Warm Solar
+        } else if (rType < 0.75) {
+          col.setHex(0xfcd34d); // Amber Gold
+        } else {
+          col.setHex(0xfb923c); // K-Class Orange Giant
+        }
+
+        if (dist < 18) {
+          col.lerp(new THREE.Color(0xfff7ed), 0.70); // Incandescent galactic nucleus
+        }
+      } else if (sectorRoll < 0.77) {
+        // [ZONE B] The 4 Logarithmic Spiral Arms of the Milky Way (~55% of stars)
+        // (Perseus, Scutum-Centaurus, Sagittarius-Carina, Outer/Norma)
+        const armIdx = i % 4;
+        const armBase = armIdx * (Math.PI / 2);
+        const dist = 20 + Math.pow(Math.random(), 0.62) * 380;
+
+        // Logarithmic spiral pitch
+        const spiralAngle = Math.log(dist / 16) * 2.1 + armBase;
+        const dispersion = (Math.random() - 0.5) * (0.22 + dist * 0.0006);
+        const angle = spiralAngle + dispersion;
+
+        const rScatter = (Math.random() - 0.5) * (8 + dist * 0.08);
+        const r = Math.max(8, dist + rScatter);
+
+        x = Math.cos(angle) * r;
+        z = Math.sin(angle) * r;
+
+        // Milky Way Thin Disk exponential scale height
+        const scaleHeight = 4.2 * Math.exp(-r / 200) + 1.5;
+        y = (Math.random() - 0.5) * scaleHeight * 2;
+
+        // Spiral arm stellar photometry (OBAFGKM + H-II Starbursts)
+        const pType = Math.random();
+        if (pType < 0.10) {
+          col.setHex(0xf43f5e); // H-II Ionization nursery (Magenta/Crimson)
+        } else if (pType < 0.40) {
+          col.setHex(0x38bdf8); // Hot O/B Supergiants (Electric Cyan)
+        } else if (pType < 0.70) {
+          col.setHex(0xffffff); // Brilliant A/F Stars (Pure White)
+        } else if (pType < 0.88) {
+          col.setHex(0xfef08a); // Solar Analogs (Warm Yellow)
+        } else {
+          col.setHex(0xfb923c); // K/M Dwarfs (Warm Orange)
+        }
+      } else {
+        // [ZONE C] Diffuse Inter-Arm Disk & Outer Galactic Halo (~23% of stars)
+        // Creates the seamless, continuous "milky" river of light across the night sky
+        const dist = 12 + Math.pow(Math.random(), 0.70) * 400;
+        const angle = Math.random() * Math.PI * 2;
+
+        x = Math.cos(angle) * dist;
+        z = Math.sin(angle) * dist;
+        y = (Math.random() - 0.5) * (8.5 * Math.exp(-dist / 220) + 2.5);
+
+        const dType = Math.random();
+        if (dType < 0.50) {
+          col.setHex(0xffffff);
+        } else if (dType < 0.80) {
+          col.setHex(0xbae6fd);
+        } else {
+          col.setHex(0xfef08a);
+        }
+      }
 
       starPositions[i * 3] = x;
       starPositions[i * 3 + 1] = y;
       starPositions[i * 3 + 2] = z;
 
-      // Photometric spectral colors matching astrophysical temperatures
-      let col: THREE.Color;
-
-      const pType = Math.random();
-      if (pType < 0.12) {
-        col = new THREE.Color(0xf43f5e); // H-II Ionization Pink/Crimson
-      } else if (pType < 0.35) {
-        col = new THREE.Color(0x38bdf8); // Young O/B Blue Stars
-      } else if (pType < 0.65) {
-        col = new THREE.Color(0xffffff); // Luminous A/F White Stars
-      } else if (pType < 0.85) {
-        col = new THREE.Color(0xfef08a); // Solar Analogs G-Class
-      } else {
-        col = new THREE.Color(0xfb923c); // Orange/Red Dwarfs K/M
-      }
-
-      // Center shifts toward incandescent warm gold
-      if (dist < 40) {
-        col.lerp(new THREE.Color(0xffedd5), 0.7);
-      }
-
       starColors[i * 3] = col.r;
       starColors[i * 3 + 1] = col.g;
       starColors[i * 3 + 2] = col.b;
-      starSizes[i] = 0.8 + Math.random() * 2.6;
+
+      // Multi-Tier Depth Hierarchy:
+      // - 74% Pinpoint Micro-Stars (Faint sub-pixel to 1.1px pinpoint dust for dense milky river)
+      // - 21% Mid-Scale Field Stars (1.3px - 2.6px distinct stellar bodies)
+      // - 5% Luminous Foreground Beacons & Supergiants (3.2px - 6.2px for prominent 3D parallax depth)
+      const tierRoll = Math.random();
+      let baseSize: number;
+      let alpha: number;
+
+      if (tierRoll < 0.74) {
+        baseSize = 0.45 + Math.random() * 0.70;
+        alpha = 0.25 + Math.random() * 0.45;
+      } else if (tierRoll < 0.95) {
+        baseSize = 1.3 + Math.random() * 1.3;
+        alpha = 0.65 + Math.random() * 0.30;
+      } else {
+        baseSize = 3.2 + Math.random() * 3.0;
+        alpha = 0.88 + Math.random() * 0.12;
+      }
+
+      if (isBulge) {
+        alpha = Math.min(1.0, alpha * 1.25);
+      }
+
+      starSizes[i] = baseSize;
+      starAlphas[i] = alpha;
     }
 
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
-    starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+    starGeo.setAttribute('aColor', new THREE.BufferAttribute(starColors, 3));
+    starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSizes, 1));
+    starGeo.setAttribute('aAlpha', new THREE.BufferAttribute(starAlphas, 1));
 
-    const starMat = new THREE.PointsMaterial({
-      size: 2.8,
-      map: starTexture,
-      vertexColors: true,
+    // Custom WebGL Points Shader Material with per-star size attenuation and alpha modulation
+    const starShaderMat = new THREE.ShaderMaterial({
+      uniforms: {
+        pointTexture: { value: starTexture }
+      },
+      vertexShader: `
+        attribute vec3 aColor;
+        attribute float aSize;
+        attribute float aAlpha;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vColor = aColor;
+          vAlpha = aAlpha;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = aSize * (270.0 / -mvPosition.z);
+          gl_PointSize = max(gl_PointSize, 0.7);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D pointTexture;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vec4 tex = texture2D(pointTexture, gl_PointCoord);
+          gl_FragColor = vec4(vColor * tex.rgb, tex.a * vAlpha);
+        }
+      `,
       transparent: true,
-      opacity: 0.90,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
-    const galaxyPoints = new THREE.Points(starGeo, starMat);
-    galaxyPoints.rotation.x = 0.45;
-    scene.add(galaxyPoints);
 
-    // 1.3 Volumetric Core Accretion Sphere
-    const coreMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(28, 32, 32),
-      new THREE.MeshBasicMaterial({
-        color: 0xffd28a,
-        transparent: true,
-        opacity: 0.32,
-        blending: THREE.AdditiveBlending
-      })
-    );
+    const galaxyPoints = new THREE.Points(starGeo, starShaderMat);
+    galaxyDiskGroup.add(galaxyPoints);
+
+    // 1.3 Volumetric Core Accretion Spheroid
+    const coreGeo = new THREE.SphereGeometry(26, 32, 32);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0xffd28a,
+      transparent: true,
+      opacity: 0.32,
+      blending: THREE.AdditiveBlending
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
     coreMesh.scale.set(2.4, 0.45, 2.4);
-    coreMesh.rotation.x = 0.45;
-    scene.add(coreMesh);
+    galaxyDiskGroup.add(coreMesh);
 
     // Interactive mouse parallax
     let mouse = { x: 0, y: 0 };
@@ -332,6 +444,10 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
+      starGeo.dispose();
+      starShaderMat.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
       starTexture.dispose();
       cyanNebulaTex.dispose();
       magentaNebulaTex.dispose();
