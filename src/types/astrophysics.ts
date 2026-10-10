@@ -112,4 +112,4 @@ export interface SectorConfiguration {
   seed: number;
 }
 
-export type ActiveAppMode = 'sector-3d' | 'astro-architect' | 'classic-simulator';
+export type ActiveAppMode = 'home' | 'sector-3d' | 'astro-architect';

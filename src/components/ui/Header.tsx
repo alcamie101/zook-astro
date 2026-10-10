@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Compass, Rocket, Wrench, Layers } from 'lucide-react';
+import { Sparkles, Compass, Rocket, Wrench, Home } from 'lucide-react';
 import { FilterCategory, StarSystem, ActiveAppMode } from '../../types/astrophysics';
 
 interface HeaderProps {
@@ -49,29 +49,46 @@ export const Header: React.FC<HeaderProps> = ({
       data-section="Command Bar & Filters"
       className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl glass-hud border-slate-800/80 relative"
     >
-      {/* Title & App Branding */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+      {/* Title & App Branding (clickable to Home) */}
+      <div
+        onClick={() => onSelectApp('home')}
+        className="flex items-center gap-2.5 cursor-pointer group"
+        title="Return to Astro Suite Showcase Home"
+      >
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
           <Compass className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
-            Galactic Astro Suite
+          <h1 className="text-sm font-bold text-white tracking-wide flex items-center gap-2 group-hover:text-cyan-300 transition-colors">
+            ZOOK ASTRO
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">
               {starCount.toLocaleString()} Stars &bull; {morphologyLabel}
             </span>
             <span className="text-[9px] font-mono text-slate-500 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800">
-              SEC-01
+              v2.5
             </span>
           </h1>
           <p className="text-[10.5px] text-slate-400">
-            Strict Astrophysics &bull; 3D Sector Simulator &bull; Astro-Architect &bull; Stellaris Exporter
+            3D Sector Simulator &bull; 3D Astro-Architect &bull; Stellaris Mod Engine
           </p>
         </div>
       </div>
 
       {/* Main Application Suite Navigation Switcher */}
       <nav className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shadow-inner text-xs font-mono">
+        <button
+          onClick={() => onSelectApp('home')}
+          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
+            activeApp === 'home'
+              ? 'bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold shadow-md shadow-white/10'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+          }`}
+          title="Return to Showcase Homepage"
+        >
+          <Home className="w-3.5 h-3.5" />
+          <span>Home</span>
+        </button>
+
         <button
           onClick={() => onSelectApp('sector-3d')}
           className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
@@ -89,26 +106,13 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onSelectApp('astro-architect')}
           className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
             activeApp === 'astro-architect'
-              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-md shadow-indigo-500/20'
+              ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold shadow-md shadow-amber-500/20'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
           }`}
-          title="System Hierarchy Designer, Galaxy Cartographer & Stellaris Mod Script Exporter"
+          title="3D Galactic Cartographer, Celestial Hierarchy & Stellaris Exporter"
         >
           <Wrench className="w-3.5 h-3.5" />
-          <span>Astro-Architect</span>
-        </button>
-
-        <button
-          onClick={() => onSelectApp('classic-simulator')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
-            activeApp === 'classic-simulator'
-              ? 'bg-gradient-to-r from-amber-600 to-rose-600 text-white font-bold shadow-md shadow-amber-500/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-          }`}
-          title="Classic 2D Star System Evolution Simulator Prototype"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>2D Classic Sim</span>
+          <span>3D Astro-Architect</span>
         </button>
       </nav>
 
@@ -191,14 +195,14 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       ) : activeApp === 'astro-architect' ? (
-        <div className="flex items-center gap-2 text-[11px] font-mono text-indigo-300 bg-indigo-950/60 px-3 py-1.5 rounded-lg border border-indigo-800">
-          <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-          <span>Galaxy Cartographer &bull; Hierarchy Tree &bull; Stellaris Mod Generator</span>
-        </div>
-      ) : (
         <div className="flex items-center gap-2 text-[11px] font-mono text-amber-300 bg-amber-950/60 px-3 py-1.5 rounded-lg border border-amber-800">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          <span>Classic 2D Canvas Star Generator &bull; Evolution Track</span>
+          <span>3D Galaxy Cartographer &bull; 4-Tier Hierarchy &bull; Stellaris Mod Engine</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-[11px] font-mono text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span>Observatory & Cartographer Suite &bull; Select Engine</span>
         </div>
       )}
     </header>

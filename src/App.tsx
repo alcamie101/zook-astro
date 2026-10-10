@@ -13,10 +13,13 @@ import { SectorControls } from './components/ui/SectorControls';
 import { SectorView3D } from './components/canvas/SectorView3D';
 import { StellarInspector } from './components/ui/StellarInspector';
 import { useResizableColumns } from './hooks/useResizableColumns';
-import { EmbeddedAppView } from './components/ui/EmbeddedAppView';
+import { ShowcaseHome } from './components/home/ShowcaseHome';
+import { AstroArchitectApp } from './components/architect/AstroArchitectApp';
 
 export const App: React.FC = () => {
-  const [activeApp, setActiveApp] = useState<ActiveAppMode>('sector-3d');
+  // Application mode starts at the sensational homepage showcase
+  const [activeApp, setActiveApp] = useState<ActiveAppMode>('home');
+
   const [config, setConfig] = useState<SectorConfiguration>({
     starCount: 1000,
     morphology: 'disk',
@@ -32,7 +35,7 @@ export const App: React.FC = () => {
   const [selectedPlanetIndex, setSelectedPlanetIndex] = useState<number>(0);
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
 
-  // Resizable 3-column layout hook
+  // Resizable 3-column layout hook for 3D Sector Sim
   const { colWidths, mainContainerRef, startDrag, resetColWidths } = useResizableColumns();
 
   // Sector Generation
@@ -111,8 +114,8 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col p-2 gap-2 bg-[#03050c]">
-      {/* SEC-01: Top Header Command Bar */}
+    <div className="h-screen w-screen flex flex-col p-2 gap-2 bg-[#03050c] overflow-hidden">
+      {/* Top Header Command Bar */}
       <Header
         stars={stars}
         activeFilter={activeFilter}
@@ -125,7 +128,11 @@ export const App: React.FC = () => {
       />
 
       {/* Main Multi-App Viewport */}
-      {activeApp === 'sector-3d' ? (
+      {activeApp === 'home' ? (
+        <main className="w-full flex-1 min-h-0 relative rounded-xl overflow-hidden glass-hud border border-slate-800/80">
+          <ShowcaseHome onSelectApp={setActiveApp} />
+        </main>
+      ) : activeApp === 'sector-3d' ? (
         <main
           ref={mainContainerRef}
           className="w-full flex-1 flex flex-row gap-0 min-h-0 relative overflow-hidden select-none"
@@ -196,24 +203,11 @@ export const App: React.FC = () => {
             />
           </div>
         </main>
-      ) : activeApp === 'astro-architect' ? (
-        <main className="w-full flex-1 min-h-0 relative">
-          <EmbeddedAppView
-            title="Galactic Astro-Architect & Stellar Cartographer"
-            badge="Galaxy Cartographer & Exporter"
-            description="Visual Hierarchy Editor, Orrery Simulation & Stellaris Mod Script Generator"
-            src="/apps/astro-architect.html"
-            onBackToSimulator={() => setActiveApp('sector-3d')}
-          />
-        </main>
       ) : (
-        <main className="w-full flex-1 min-h-0 relative">
-          <EmbeddedAppView
-            title="Classic 2D Star System Simulator"
-            badge="2D Canvas Prototype"
-            description="Original 2D canvas procedural star generation & Hertzsprung-Russell evolution track"
-            src="/apps/classic-simulator.html"
-            onBackToSimulator={() => setActiveApp('sector-3d')}
+        <main className="w-full flex-1 min-h-0 relative rounded-xl overflow-hidden glass-hud border border-slate-800/80">
+          <AstroArchitectApp
+            onBackToSectorSim={() => setActiveApp('sector-3d')}
+            onGoHome={() => setActiveApp('home')}
           />
         </main>
       )}
