@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galactic Sector Star System Evolution Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --space-bg: #03050c;
+      --card-bg: rgba(10, 15, 30, 0.90);
+      --border-hud: rgba(56, 189, 248, 0.22);
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--space-bg);
+      color: #f1f5f9;
+      user-select: none;
+      overflow: hidden;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-hud {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-hud);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+    }
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1e293b;
+      height: 5px;
+      border-radius: 9999px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #060914;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col p-2 gap-2 bg-[#03050c]">
+
+  <!-- Top Header Command Bar -->
+  <header class="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl glass-hud border-slate-800/80">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+        <svg class="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3" stroke-width="2"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 2v3m0 14v3M2 12h3m14 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6l2.1-2.1"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white tracking-wide flex items-center gap-2">
+          Galactic Sector Star System Simulator
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800" id="sectorSummaryBadge">1,000 Stars • Thin Disk</span>
+        </h1>
+        <p class="text-[10.5px] text-slate-400">Strict Pipeline: Age/Phase &rarr; (L, Teff) &rarr; Stefan-Boltzmann R* &rarr; Pure Morgan-Keenan MK Class &bull; 4&ndash;8 Exoplanets</p>
+      </div>
+    </div>
+
+    <!-- Quick Population Filter Chips -->
+    <div class="flex items-center gap-1.5 text-xs font-mono flex-wrap" id="filterChipsContainer">
+      <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mr-1">Filter:</span>
+      <button class="filter-chip px-2 py-1 rounded bg-cyan-700 text-white font-bold border border-cyan-400 text-[10.5px] transition shadow" data-filter="all">All Stars (<span id="countAll">1000</span>)</button>
+      <button class="filter-chip px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 text-[10.5px] transition" data-filter="ob">O/B (<span id="countOB">0</span>)</button>
+      <button class="filter-chip px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-yellow-300 border border-yellow-500/30 text-[10.5px] transition" data-filter="g">G Sol (<span id="countG">0</span>)</button>
+      <button class="filter-chip px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 text-[10.5px] transition" data-filter="km">K/M (<span id="countKM">0</span>)</button>
+      <button class="filter-chip px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 text-[10.5px] transition" data-filter="remnant">Remnants (<span id="countRemnant">0</span>)</button>
+      <button class="filter-chip px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 text-[10.5px] transition" data-filter="hz">HZ Life (<span id="countHZ">0</span>)</button>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="btnFindInteresting" class="px-2.5 py-1.5 rounded-lg bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/40 text-[11px] font-mono flex items-center gap-1.5 shadow transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Random Target
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Multi-Column Viewport -->
+  <main class="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-0">
+    
+    <!-- LEFT: Sector Generator Controls (3 cols) -->
+    <aside class="lg:col-span-3 rounded-xl glass-hud p-2.5 border border-slate-800/80 flex flex-col gap-2 overflow-y-auto">
+      <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+        <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          Sector Parameters
+        </span>
+        <button id="btnRandomSeed" class="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 underline">Seed: <span id="currentSeedText">4289</span></button>
+      </div>
+
+      <!-- Star Count -->
+      <div class="flex flex-col gap-1 bg-slate-900/60 p-2 rounded-lg border border-slate-800/70">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold">Total Star Count</span>
+          <span id="labelStarCount" class="font-mono text-cyan-400 font-bold">1,000</span>
+        </div>
+        <input id="sliderStarCount" type="range" min="100" max="1500" step="50" value="1000" class="w-full">
+        <div class="flex justify-between text-[9px] text-slate-500 font-mono">
+          <span>100</span>
+          <span>1,000</span>
+          <span>1,500</span>
+        </div>
+      </div>
+
+      <!-- Sector Morphology -->
+      <div class="flex flex-col gap-1 bg-slate-900/60 p-2 rounded-lg border border-slate-800/70">
+        <label for="selectMorphology" class="text-slate-300 font-semibold text-xs">Galactic Environment</label>
+        <select id="selectMorphology" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 outline-none focus:border-cyan-500 font-mono">
+          <option value="disk">Galactic Thin Disk (Exponential)</option>
+          <option value="core">Globular Cluster (Dense Core)</option>
+          <option value="cluster">Stellar Nursery / Open Cluster</option>
+          <option value="halo">Galactic Halo (Diffuse Field)</option>
+        </select>
+      </div>
+
+      <!-- Mean Age -->
+      <div class="flex flex-col gap-1 bg-slate-900/60 p-2 rounded-lg border border-slate-800/70">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold">Sector Mean Age</span>
+          <span id="labelMeanAge" class="font-mono text-amber-300 font-bold">4.5 Gyr</span>
+        </div>
+        <input id="sliderMeanAge" type="range" min="0.02" max="12.5" step="0.1" value="4.5" class="w-full">
+        <div class="flex justify-between text-[9px] text-slate-500 font-mono">
+          <span>20 Myr</span>
+          <span>4.5 Gyr</span>
+          <span>12.5 Gyr</span>
+        </div>
+      </div>
+
+      <!-- Starburst Dispersion -->
+      <div class="flex flex-col gap-1 bg-slate-900/60 p-2 rounded-lg border border-slate-800/70">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold">Age Dispersion (&sigma;)</span>
+          <span id="labelAgeSigma" class="font-mono text-slate-200 font-bold">1.5 Gyr</span>
+        </div>
+        <input id="sliderAgeSigma" type="range" min="0.0" max="4.0" step="0.1" value="1.5" class="w-full">
+      </div>
+
+      <!-- Metallicity [Fe/H] -->
+      <div class="flex flex-col gap-1 bg-slate-900/60 p-2 rounded-lg border border-slate-800/70">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold">Metallicity [Fe/H]</span>
+          <span id="labelMetallicity" class="font-mono text-emerald-400 font-bold">+0.00 dex</span>
+        </div>
+        <input id="sliderMetallicity" type="range" min="-2.0" max="0.5" step="0.05" value="0.0" class="w-full">
+      </div>
+
+      <!-- Sector Diameter -->
+      <div class="flex flex-col gap-1 bg-slate-900/60 p-2 rounded-lg border border-slate-800/70">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold">Sector Radius</span>
+          <span id="labelSectorRadius" class="font-mono text-cyan-400 font-bold">120 Light-Years</span>
+        </div>
+        <input id="sliderSectorRadius" type="range" min="40" max="300" step="10" value="120" class="w-full">
+      </div>
+
+      <!-- Regenerate Button -->
+      <button id="btnRegenerate" class="w-full py-2 rounded-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30 transition mt-auto">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Regenerate Sector
+      </button>
+    </aside>
+
+    <!-- CENTER: 2D Interactive Sector Canvas (4 cols) -->
+    <section class="lg:col-span-4 rounded-xl glass-hud border border-slate-800/80 flex flex-col relative overflow-hidden" id="sectorContainer">
+      <div class="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 pointer-events-auto">
+        <div class="flex items-center bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 text-[11px] font-mono text-slate-300 shadow">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2"></span>
+          FOV: <span id="sectorZoomLabel" class="ml-1 text-cyan-400 font-bold">120 ly</span>
+        </div>
+        <button id="btnSectorZoomIn" class="w-7 h-7 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-white font-bold border border-slate-700 text-xs shadow flex items-center justify-center">+</button>
+        <button id="btnSectorZoomOut" class="w-7 h-7 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-white font-bold border border-slate-700 text-xs shadow flex items-center justify-center">-</button>
+        <button id="btnSectorReset" class="px-2 h-7 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-mono shadow">Center</button>
+      </div>
+
+      <!-- Hover Tooltip -->
+      <div id="starHoverTooltip" class="absolute z-30 pointer-events-none hidden bg-slate-950/95 border border-cyan-500/60 rounded-lg p-2 text-xs shadow-2xl font-mono text-slate-200">
+        <div class="font-bold text-cyan-400 flex items-center gap-1.5 text-[11px]" id="ttStarName">Star #492</div>
+        <div class="text-[10px] text-slate-300" id="ttStarSpec">G0IV-V &bull; 1.12 M☉</div>
+        <div class="text-[9.5px] text-emerald-400" id="ttStarPlanets">5 Exoplanets (1 in HZ)</div>
+      </div>
+
+      <div class="w-full flex-1 relative bg-[#02040b] cursor-grab active:cursor-grabbing">
+        <canvas id="sectorCanvas" class="w-full h-full block"></canvas>
+      </div>
+
+      <div class="px-3 py-1.5 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-[10px] font-mono text-slate-400">
+        <div class="flex items-center gap-2">
+          <div class="w-14 h-1 bg-cyan-400 relative">
+            <span class="absolute -top-3 left-0 text-[8.5px] text-cyan-400 font-bold" id="scaleBarText">20 ly</span>
+          </div>
+          <span class="text-slate-500">Parallax Metric</span>
+        </div>
+        <span class="text-slate-500">Click Star to Open System View</span>
+      </div>
+    </section>
+
+    <!-- RIGHT: Deep Stellar & Planetary System Inspector (5 cols) -->
+    <aside class="lg:col-span-5 rounded-xl glass-hud p-2.5 border border-slate-800/80 flex flex-col gap-2 min-h-0 overflow-y-auto" id="inspectorPanel">
+      
+      <!-- Star Header & Derived MK Classification Badge -->
+      <div class="pb-1.5 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full shadow-sm" id="inspSpectralPill" style="background:#ffdd80;"></span>
+            <h2 class="text-sm font-bold text-white font-mono" id="inspStarName">Sol Alpha (SEC-0001)</h2>
+            <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-700 shadow" id="inspMKClassificationBadge">G0IV-V</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-mono mt-0.5" id="inspSpectralSub">Solar Analog &bull; Age: 4.60 Gyr</p>
+        </div>
+        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800" id="inspPhaseTag">Main Sequence</span>
+      </div>
+
+      <!-- Evolution Timeline Scrubber -->
+      <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-1">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold flex items-center gap-1 text-[11px]">
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Evolutionary Scrub ($t$)
+          </span>
+          <span id="inspAgeDisplay" class="font-mono text-amber-300 font-bold text-xs">4.60 Gyr (MS)</span>
+        </div>
+        <input id="inspTimelineSlider" type="range" min="0" max="100" step="0.05" value="38" class="w-full">
+        <div class="flex justify-between text-[8px] text-slate-500 font-mono">
+          <span>0% ZAMS</span>
+          <span>50% TAMS</span>
+          <span>72% RGB/HB</span>
+          <span>86% Unveil/SN</span>
+          <span>100% Remnant</span>
+        </div>
+      </div>
+
+      <!-- Astrophysics Derived Telemetry Grid -->
+      <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80 text-[10px] font-mono">
+        <div class="text-slate-400">Progenitor Mass:</div>
+        <div class="text-right text-slate-200" id="inspProgenitorMass">1.00 M☉</div>
+
+        <div class="text-slate-400">Current Mass:</div>
+        <div class="text-right text-slate-200" id="inspCurrentMass">1.00 M☉</div>
+
+        <div class="text-slate-400">Stefan-Boltzmann $R_*$:</div>
+        <div class="text-right font-bold text-amber-300" id="inspRadius">1.000 R☉</div>
+
+        <div class="text-slate-400">Luminosity ($L$):</div>
+        <div class="text-right text-slate-200" id="inspLum">1.00 L☉</div>
+
+        <div class="text-slate-400">Effective Temp ($T_{\text{eff}}$):</div>
+        <div class="text-right text-slate-200" id="inspTeff">5,778 K</div>
+
+        <div class="text-slate-400">Inward HZ:</div>
+        <div class="text-right font-bold text-emerald-400" id="inspHZ">0.89 - 1.62 AU</div>
+      </div>
+
+      <!-- Dual Lower Panes: HR Track & Circumstellar Orbit Map -->
+      <div class="grid grid-cols-2 gap-2">
+        <!-- HR Diagram -->
+        <div class="bg-slate-950 p-1.5 rounded-lg border border-slate-800 flex flex-col gap-1">
+          <div class="flex justify-between items-center text-[9.5px] font-mono">
+            <span class="text-slate-300 font-bold uppercase">HR Diagram Track</span>
+            <span class="text-cyan-400 text-[8.5px]" id="inspHRCoords">log L: 0.00</span>
+          </div>
+          <div class="w-full h-28 bg-[#02050e] rounded border border-slate-800/80 relative overflow-hidden" id="inspHRContainer">
+            <canvas id="inspHRCanvas" class="w-full h-full block"></canvas>
+          </div>
+        </div>
+
+        <!-- Circumstellar Canvas View -->
+        <div class="bg-slate-950 p-1.5 rounded-lg border border-slate-800 flex flex-col gap-1">
+          <div class="flex justify-between items-center text-[9.5px] font-mono">
+            <span class="text-slate-300 font-bold uppercase flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Orbits &amp; HZ
+            </span>
+            <span class="text-cyan-400 text-[8.5px]" id="inspPlanetCountBadge">5 Planets</span>
+          </div>
+          <div class="w-full h-28 bg-[#02040b] rounded border border-slate-800/80 relative overflow-hidden" id="inspSystemContainer">
+            <canvas id="inspSystemCanvas" class="w-full h-full block cursor-pointer"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELECTED PLANET DOSSIER CARD (Clickable) -->
+      <div class="bg-slate-900/90 rounded-lg border border-cyan-800/60 p-2 flex flex-col gap-1 shadow-lg" id="planetDossierCard">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full" id="pdColorDot" style="background:#38bdf8;"></span>
+            <span class="text-xs font-bold text-white font-mono" id="pdName">Planet D</span>
+            <span class="text-[9.5px] font-mono text-cyan-400" id="pdType">Temperate Ocean World</span>
+          </div>
+          <span class="px-2 py-0.2 rounded text-[9px] font-mono border font-bold" id="pdHabStatusBadge">Candidate Habitable</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-x-2 gap-y-0.5 text-[9.5px] font-mono pt-0.5">
+          <div><span class="text-slate-400">Orbit $a(t)$:</span> <span class="text-slate-200 font-bold" id="pdDist">1.00 AU</span></div>
+          <div><span class="text-slate-400">Period:</span> <span class="text-slate-200" id="pdPeriod">365 d</span></div>
+          <div><span class="text-slate-400">Eccentricity:</span> <span class="text-slate-200" id="pdEcc">0.016</span></div>
+
+          <div><span class="text-slate-400">Mass:</span> <span class="text-slate-200" id="pdMass">1.00 M⊕</span></div>
+          <div><span class="text-slate-400">Radius:</span> <span class="text-slate-200" id="pdRadius">1.00 R⊕</span></div>
+          <div><span class="text-slate-400">Gravity:</span> <span class="text-slate-200" id="pdGravity">1.00 g</span></div>
+
+          <div><span class="text-slate-400">Insolation:</span> <span class="text-slate-200" id="pdFlux">1361 W/m²</span></div>
+          <div><span class="text-slate-400">Equil $T_{\text{eq}}$:</span> <span class="text-slate-200" id="pdTeq">255 K</span></div>
+          <div><span class="text-slate-400">Surface $T$:</span> <span class="text-amber-300 font-bold" id="pdTsurf">288 K (15°C)</span></div>
+        </div>
+
+        <div class="flex items-center justify-between text-[9px] font-mono bg-slate-950/70 px-2 py-1 rounded border border-slate-850 mt-0.5">
+          <span class="text-slate-400">Atmosphere: <strong class="text-slate-200" id="pdAtmosphere">N2 (78%), O2 (21%), H2O, CO2</strong></span>
+          <span class="text-amber-400 font-bold" id="pdTidalLock">No Tidal Locking</span>
+        </div>
+      </div>
+
+      <!-- PLANET FLEET LIST (Click any planet to inspect) -->
+      <div class="flex flex-col gap-1">
+        <span class="text-[9.5px] font-mono text-slate-400 uppercase tracking-wider font-semibold">Select Planet to Inspect:</span>
+        <div class="max-h-28 overflow-y-auto flex flex-col gap-1 pr-1" id="inspPlanetList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <script>
+    /* ==========================================================================
+       1. ASTROPHYSICAL CONSTANTS & DYNAMIC MK CLASSIFIER
+       ========================================================================== */
+    const R_SUN_KM = 696340;
+    const R_SUN_AU = 0.00465047;
+    const R_EARTH_KM = 6371;
+    const M_EARTH_KG = 5.972e24;
+    const M_JUP_EARTH = 317.8;
+    const R_JUP_EARTH = 11.2;
+    const T_SUN = 5778;
+    const SOLAR_FLUX_EARTH = 1361; // W/m^2
+
+    const S_EFF_INNER = 1.25; // Moist/Runaway greenhouse limit
+    const S_EFF_OUTER = 0.38; // Maximum greenhouse limit
+
+    /**
+     * Morgan-Keenan spectral classification scale (Mamajek 2022 dwarf scale)
+     */
+    const MK_TEFF_GRID = [
+      { class: "O2", teff: 48000 },
+      { class: "O3", teff: 44000 },
+      { class: "O5", teff: 40000 },
+      { class: "O8", teff: 35000 },
+      { class: "B0", teff: 31400 },
+      { class: "B2", teff: 22000 },
+      { class: "B5", teff: 15700 },
+      { class: "B8", teff: 12500 },
+      { class: "A0", teff: 9700 },
+      { class: "A2", teff: 9000 },
+      { class: "A5", teff: 8180 },
+      { class: "A7", teff: 7850 },
+      { class: "F0", teff: 7280 },
+      { class: "F2", teff: 7000 },
+      { class: "F5", teff: 6510 },
+      { class: "F6", teff: 6350 },
+      { class: "F8", teff: 6170 },
+      { class: "G0", teff: 5930 },
+      { class: "G1", teff: 5860 },
+      { class: "G2", teff: 5770 },
+      { class: "G5", teff: 5660 },
+      { class: "G8", teff: 5440 },
+      { class: "K0", teff: 5280 },
+      { class: "K2", teff: 5040 },
+      { class: "K3", teff: 4840 },
+      { class: "K5", teff: 4450 },
+      { class: "K7", teff: 4050 },
+      { class: "M0", teff: 3850 },
+      { class: "M1", teff: 3700 },
+      { class: "M2", teff: 3550 },
+      { class: "M3", teff: 3410 },
+      { class: "M4", teff: 3200 },
+      { class: "M5", teff: 3030 },
+      { class: "M6", teff: 2800 },
+      { class: "M7", teff: 2600 },
+      { class: "M8", teff: 2500 },
+      { class: "M9", teff: 2300 }
+    ];
+
+    /**
+     * PURE FUNCTION: Derives MK Spectral Class & Luminosity Class
+     * Strictly from instantaneous Teff, logL, and Stefan-Boltzmann radius R*.
+     * 5870 K with R=1.48 Rsun -> evaluates strictly to G0IV-V or G1IV, NEVER F6V.
+     */
+    function deriveMorganKeenanClass(Teff, logL, radiusRsun, phase, mass) {
+      if (phase.includes("Black Hole")) return { full: "BH (Singularity)", sub: "Stellar-Mass Black Hole", pillColor: "#000000" };
+      if (phase.includes("Neutron Star")) return { full: "NS (Degenerate)", sub: "Pulsar / Neutron Star", pillColor: "#e0f2fe" };
+      if (phase.includes("White Dwarf")) return { full: "DA/DB VII", sub: "Degenerate White Dwarf", pillColor: "#f0f9ff" };
+
+      // 1. Spectral Type from Teff
+      let subtype = "M9";
+      if (Teff >= MK_TEFF_GRID[0].teff) {
+        subtype = "O2";
+      } else {
+        for (let i = 0; i < MK_TEFF_GRID.length - 1; i++) {
+          const upper = MK_TEFF_GRID[i];
+          const lower = MK_TEFF_GRID[i + 1];
+          if (Teff <= upper.teff && Teff >= lower.teff) {
+            const mid = (upper.teff + lower.teff) / 2;
+            subtype = Teff >= mid ? upper.class : lower.class;
+            break;
+          }
+        }
+      }
+
+      // 2. Luminosity Class via Yerkes classification from log(L) & R*
+      let lumClass = "V";
+      if (radiusRsun > 120 || logL > 4.8) {
+        lumClass = logL > 5.2 ? "Ia" : "Ib"; // Supergiant
+      } else if (radiusRsun > 40 || (logL > 3.2 && Teff < 5000)) {
+        lumClass = "II"; // Bright Giant
+      } else if (radiusRsun > 8.0 || (logL > 1.8 && Teff < 5200)) {
+        lumClass = "III"; // Giant
+      } else if (radiusRsun > 1.35 || (logL > 0.4 && Teff < 6200 && phase.includes("Subgiant"))) {
+        lumClass = radiusRsun > 1.7 ? "IV" : "IV-V"; // Subgiant / Evolving Dwarf
+      } else if (radiusRsun < 0.6 && Teff < 4000) {
+        lumClass = "V"; // Main Sequence M/K dwarf
+      }
+
+      const fullClass = `${subtype}${lumClass}`;
+      let descriptive = `${fullClass} Star`;
+      if (lumClass.includes("IV")) descriptive = `${subtype} Subgiant / Evolving Dwarf`;
+      else if (lumClass === "III") descriptive = `${subtype} Giant`;
+      else if (lumClass === "V") descriptive = `${subtype} Main Sequence Dwarf`;
+      else if (lumClass.includes("I")) descriptive = `${subtype} Supergiant`;
+
+      return { full: fullClass, sub: descriptive };
+    }
+
+    const EMPIRICAL_MS_GRID = [
+      { mass: 0.08, teff: 2400, radius: 0.115, lum: 1.1e-4 },
+      { mass: 0.10, teff: 2600, radius: 0.130, lum: 1.8e-4 },
+      { mass: 0.15, teff: 2850, radius: 0.175, lum: 5.6e-4 },
+      { mass: 0.20, teff: 3100, radius: 0.220, lum: 1.5e-3 },
+      { mass: 0.30, teff: 3350, radius: 0.305, lum: 4.8e-3 },
+      { mass: 0.40, teff: 3550, radius: 0.385, lum: 1.1e-2 },
+      { mass: 0.50, teff: 3800, radius: 0.480, lum: 2.8e-2 },
+      { mass: 0.60, teff: 4200, radius: 0.590, lum: 7.2e-2 },
+      { mass: 0.70, teff: 4650, radius: 0.690, lum: 0.165 },
+      { mass: 0.80, teff: 5050, radius: 0.785, lum: 0.34 },
+      { mass: 0.90, teff: 5400, radius: 0.880, lum: 0.61 },
+      { mass: 1.00, teff: 5778, radius: 1.000, lum: 1.00 },
+      { mass: 1.15, teff: 6100, radius: 1.160, lum: 1.80 },
+      { mass: 1.25, teff: 6400, radius: 1.250, lum: 2.50 },
+      { mass: 1.50, teff: 7100, radius: 1.450, lum: 5.40 },
+      { mass: 2.00, teff: 8800, radius: 1.850, lum: 18.0 },
+      { mass: 3.00, teff: 12000, radius: 2.450, lum: 110.0 },
+      { mass: 5.00, teff: 16500, radius: 3.400, lum: 750.0 },
+      { mass: 8.00, teff: 22000, radius: 4.500, lum: 3800.0 },
+      { mass: 15.0, teff: 30000, radius: 6.800, lum: 28000.0 },
+      { mass: 30.0, teff: 39000, radius: 10.50, lum: 180000.0 },
+      { mass: 60.0, teff: 45000, radius: 15.50, lum: 700000.0 },
+      { mass: 100.0, teff: 50000, radius: 21.00, lum: 1800000.0 }
+    ];
+
+    function interpolateMS(m) {
+      if (m <= EMPIRICAL_MS_GRID[0].mass) return EMPIRICAL_MS_GRID[0];
+      const last = EMPIRICAL_MS_GRID[EMPIRICAL_MS_GRID.length - 1];
+      if (m >= last.mass) return last;
+
+      for (let i = 0; i < EMPIRICAL_MS_GRID.length - 1; i++) {
+        const p1 = EMPIRICAL_MS_GRID[i];
+        const p2 = EMPIRICAL_MS_GRID[i + 1];
+        if (m >= p1.mass && m <= p2.mass) {
+          const logM1 = Math.log10(p1.mass);
+          const logM2 = Math.log10(p2.mass);
+          const t = (Math.log10(m) - logM1) / (logM2 - logM1);
+          const s = t * t * (3 - 2 * t);
+          return {
+            teff: p1.teff + (p2.teff - p1.teff) * s,
+            radius: p1.radius + (p2.radius - p1.radius) * s,
+            lum: Math.pow(10, Math.log10(p1.lum) + (Math.log10(p2.lum) - Math.log10(p1.lum)) * s)
+          };
+        }
+      }
+      return EMPIRICAL_MS_GRID[0];
+    }
+
+    function calculateMSLifetimeGyr(m) {
+      if (m < 0.35) return 12.0 * Math.pow(m, -2.75);
+      if (m < 1.3) {
+        const w = (m - 0.35) / (1.3 - 0.35);
+        return (12.0 * Math.pow(m, -2.75)) * (1 - w) + (10.0 * Math.pow(m, -2.5)) * w;
+      }
+      if (m <= 8.0) return 10.0 * Math.pow(m, -2.5);
+      return (35.0 * Math.pow(m / 10.0, -1.35)) / 1000.0;
+    }
+
+    /**
+     * STRICT PIPELINE CALCULATION:
+     * 1. Compute Phase, Age, L, and Teff.
+     * 2. Compute Stefan-Boltzmann radius R* = sqrt(L) / (Teff/5778)^2.
+     * 3. Compute MK classification from Teff, logL, and R*.
+     */
+    function calculateStellarEvolution(M0, progressPct) {
+      const zams = interpolateMS(M0);
+      const tMS_Gyr = calculateMSLifetimeGyr(M0);
+
+      let phase = "", ageGyr = 0, ageText = "";
+      let Teff = zams.teff, L = zams.lum, currentMass = M0;
+      let isPulsating = false, isSupernova = false, isPlanetaryNebula = false;
+      let nebulaRadiusAU = 0, snShockRadiusAU = 0;
+      let isRemnant = false, remnantType = null;
+
+      const giantCapacity = 1.0 / (1.0 + Math.exp(-(M0 - 0.38) * 16.0));
+
+      if (M0 >= 8.0) {
+        const tMS_Myr = tMS_Gyr * 1000.0;
+        if (progressPct < 58.0) {
+          phase = "O/B Main Sequence";
+          const u = progressPct / 58.0;
+          ageGyr = (u * tMS_Myr) / 1000;
+          ageText = `${(u * tMS_Myr).toFixed(2)} Myr`;
+          L = zams.lum * (1.0 + 0.8 * u);
+          Teff = zams.teff * (1.0 - 0.12 * u);
+          currentMass = M0 * (1.0 - 0.15 * u);
+        } else if (progressPct < 82.0) {
+          const u = (progressPct - 58.0) / 24.0;
+          const curMyr = tMS_Myr + u * (tMS_Myr * 0.12);
+          ageGyr = curMyr / 1000;
+          ageText = `${curMyr.toFixed(2)} Myr`;
+          L = zams.lum * 2.2;
+          if (u < 0.35) {
+            phase = "Red Supergiant (RSG)";
+            Teff = 3450;
+          } else if (u < 0.72) {
+            const loopProgress = (u - 0.35) / 0.37;
+            Teff = 3450 + 4200 * Math.sin(loopProgress * Math.PI);
+            if (Teff >= 5000 && Teff <= 6800) {
+              phase = "Instability Strip (Cepheid Pulsator)";
+              isPulsating = true;
+            } else {
+              phase = "Blue Loop Supergiant";
+            }
+          } else {
+            phase = "Wolf-Rayet Star (Stripped Core)";
+            Teff = 42000 + 30000 * ((u - 0.72) / 0.28);
+          }
+          currentMass = M0 * (0.85 - 0.40 * u);
+        } else if (progressPct < 87.0) {
+          const u = (progressPct - 82.0) / 5.0;
+          ageGyr = (tMS_Myr * 1.12) / 1000;
+          ageText = `+${Math.round(u * 350)} d (SN)`;
+          phase = M0 > 22 ? "Type Ib/c Core Collapse Supernova" : "Type II Core Collapse Supernova";
+          isSupernova = true;
+          isRemnant = true;
+          const isBH = M0 >= 22.0;
+          remnantType = isBH ? "Black Hole" : "Neutron Star";
+          currentMass = isBH ? 3.0 + (M0 - 22) * 0.35 : 1.44;
+          L = 1e8 * Math.pow(Math.sin(u * Math.PI), 0.5) + 1e4;
+          Teff = 9500 - 4000 * u;
+          snShockRadiusAU = u * 35.0;
+        } else {
+          const u = (progressPct - 87.0) / 13.0;
+          ageGyr = ((tMS_Myr * 1.12) + u * 50.0) / 1000;
+          ageText = `${ageGyr.toFixed(2)} Gyr`;
+          isRemnant = true;
+          const isBH = M0 >= 22.0;
+          remnantType = isBH ? "Black Hole" : "Neutron Star";
+          currentMass = isBH ? 3.0 + (M0 - 22) * 0.35 : 1.44;
+          phase = isBH ? "Stellar-Mass Black Hole" : "Neutron Star / Pulsar";
+          L = isBH ? 1e-6 : 0.01 * Math.pow(1 + u * 4, -1.4);
+          Teff = isBH ? 0 : 500000 * Math.pow(1 + u * 4, -0.3);
+          isPlanetaryNebula = true;
+          nebulaRadiusAU = 35.0 + u * 45.0;
+        }
+      } else {
+        const tPMS_Myr = Math.max(10, 80 * Math.pow(M0, -1.2));
+        if (progressPct < 6.0) {
+          const u = progressPct / 6.0;
+          ageGyr = (u * tPMS_Myr) / 1000.0;
+          ageText = `${(u * tPMS_Myr).toFixed(1)} Myr`;
+          phase = "Protostellar Collapse (Hayashi Track)";
+          const L_init = zams.lum * (10.0 + 15.0 * Math.pow(M0, 0.5));
+          L = L_init * Math.pow(zams.lum / L_init, u);
+          const Teff_init = Math.min(zams.teff, 3200);
+          Teff = Teff_init + (zams.teff - Teff_init) * Math.pow(u, 1.5);
+        } else if (progressPct < 50.0) {
+          const u = (progressPct - 6.0) / 44.0;
+          ageGyr = (tPMS_Myr / 1000.0) + u * tMS_Gyr;
+          ageText = ageGyr >= 1000 ? `${(ageGyr / 1000).toFixed(2)} Tyr` : `${ageGyr.toFixed(2)} Gyr`;
+          phase = "Main Sequence";
+          L = zams.lum * (1.0 + (0.85 * giantCapacity + 0.15) * Math.pow(u, 1.2));
+          if (giantCapacity < 0.2) {
+            Teff = zams.teff + 400 * (1 - giantCapacity) * Math.pow(u, 1.5);
+          } else {
+            Teff = zams.teff * (1.0 - 0.08 * u * giantCapacity);
+          }
+        } else if (progressPct < 60.0) {
+          const u = (progressPct - 50.0) / 10.0;
+          ageGyr = tMS_Gyr + u * (0.8 * Math.pow(M0, -2.0));
+          ageText = ageGyr >= 1000 ? `${(ageGyr / 1000).toFixed(2)} Tyr` : `${ageGyr.toFixed(2)} Gyr`;
+          if (giantCapacity > 0.3) {
+            phase = "Subgiant Branch (SGB)";
+            const L_sgb = zams.lum * (2.0 + 3.0 * Math.pow(M0, 1.2));
+            L = zams.lum * 1.85 + (L_sgb - zams.lum * 1.85) * u;
+            Teff = (zams.teff * 0.92) + ((3900 + (zams.teff - 3900) * 0.2) - (zams.teff * 0.92)) * u;
+          } else {
+            phase = "Blue Dwarf Transition";
+            L = zams.lum * (1.15 + 0.35 * u);
+            Teff = zams.teff + 600 * u;
+          }
+        } else if (progressPct < 70.0) {
+          const u = (progressPct - 60.0) / 10.0;
+          ageGyr = tMS_Gyr + (0.8 + u * 0.6) * Math.pow(M0, -1.8);
+          ageText = ageGyr >= 1000 ? `${(ageGyr / 1000).toFixed(2)} Tyr` : `${ageGyr.toFixed(2)} Gyr`;
+          if (giantCapacity > 0.3) {
+            phase = u > 0.92 ? "RGB Tip (Helium Core Flash)" : "Red Giant Branch (Shell H)";
+            const L_tip = 2800 * Math.pow(M0, 0.4) * giantCapacity;
+            L = Math.max(zams.lum * 4.0, zams.lum * 4.0 * Math.exp(u * Math.log(Math.max(10, L_tip / (zams.lum * 4.0)))));
+            Teff = 3900 - 900 * Math.pow(u, 0.5);
+            currentMass = M0 - 0.15 * M0 * u * giantCapacity;
+          } else {
+            phase = "Blue Dwarf Phase";
+            L = zams.lum * 1.5;
+            Teff = zams.teff + 1200 * u;
+          }
+        } else if (progressPct < 78.0) {
+          const u = (progressPct - 70.0) / 8.0;
+          ageGyr = tMS_Gyr + (1.4 + u * 0.12) * Math.pow(M0, -1.5);
+          ageText = ageGyr >= 1000 ? `${(ageGyr / 1000).toFixed(2)} Tyr` : `${ageGyr.toFixed(2)} Gyr`;
+          if (giantCapacity > 0.3) {
+            phase = "Horizontal Branch / Red Clump";
+            L = (55 * Math.pow(M0, 0.7) + 15 * Math.sin(u * Math.PI)) * giantCapacity;
+            Teff = 4700 + 400 * Math.sin(u * Math.PI);
+            currentMass = M0 - 0.20 * M0 * giantCapacity;
+          } else {
+            phase = "Helium Dwarf Precursor";
+            L = zams.lum * 0.4 * (1 - 0.5 * u);
+            Teff = zams.teff + 1500;
+          }
+        } else if (progressPct < 85.0) {
+          const u = (progressPct - 78.0) / 7.0;
+          ageGyr = tMS_Gyr + (1.52 + u * 0.025) * Math.pow(M0, -1.5);
+          ageText = ageGyr >= 1000 ? `${(ageGyr / 1000).toFixed(2)} Tyr` : `${ageGyr.toFixed(2)} Gyr`;
+          if (giantCapacity > 0.3) {
+            phase = "Asymptotic Giant (TP-AGB)";
+            const pulse = Math.max(0, Math.sin(u * Math.PI * 6)) * 2500 * giantCapacity;
+            L = 2200 + 3800 * Math.pow(u, 0.8) * giantCapacity + pulse;
+            Teff = 3100 - 200 * u;
+            const finalCoreMass = 0.50 + 0.12 * Math.pow(M0, 0.6);
+            currentMass = (M0 - 0.20 * M0) - ((M0 - 0.20 * M0) - finalCoreMass) * u;
+          } else {
+            phase = "Late Degenerate Contraction";
+            L = 0.05 * (1 - 0.5 * u);
+            Teff = 4500;
+          }
+        } else if (progressPct < 89.0) {
+          const u = (progressPct - 85.0) / 4.0;
+          ageGyr = tMS_Gyr + 1.55 * Math.pow(M0, -1.5);
+          ageText = giantCapacity > 0.3 ? `+${Math.round(u * 25000).toLocaleString()} yr Post-AGB` : `${ageGyr.toFixed(2)} Gyr`;
+          if (giantCapacity > 0.3) {
+            phase = "Post-AGB Core Unveiling (CSPN)";
+            L = 3600 * (1.0 - 0.5 * u);
+            Teff = 3000 + (135000 - 3000) * Math.pow(u, 0.4);
+            currentMass = 0.50 + 0.12 * Math.pow(M0, 0.6);
+            isPlanetaryNebula = true;
+            nebulaRadiusAU = u * 4.5;
+          } else {
+            phase = "Helium White Dwarf";
+            L = 0.02 * (1 - 0.3 * u);
+            Teff = 8500 * (1 - 0.2 * u);
+            currentMass = M0 * 0.95;
+          }
+        } else {
+          const u = (progressPct - 89.0) / 11.0;
+          const coolingGyr = u * 8.0;
+          ageGyr = tMS_Gyr + 1.55 * Math.pow(M0, -1.5) + coolingGyr;
+          ageText = ageGyr >= 1000 ? `${(ageGyr / 1000).toFixed(2)} Tyr` : `${ageGyr.toFixed(2)} Gyr`;
+          phase = "Degenerate White Dwarf";
+          isRemnant = true;
+          remnantType = "White Dwarf";
+          currentMass = giantCapacity > 0.3 ? (0.50 + 0.12 * Math.pow(M0, 0.6)) : (M0 * 0.95);
+          const rWD = 0.0125 * Math.pow(currentMass / 0.6, -1/3);
+          L = (0.12 * Math.pow(1 + coolingGyr * 2.5, -1.3)) * (giantCapacity > 0.3 ? 1.0 : 0.4);
+          Teff = Math.max(2200, T_SUN * Math.pow(L / (rWD * rWD), 0.25));
+        }
+      }
+
+      // STEP 2: Stefan-Boltzmann Radius R*
+      let radiusRsun;
+      let radiusKm;
+      if (isRemnant) {
+        if (remnantType === "Black Hole") {
+          radiusKm = 2.95 * currentMass;
+          radiusRsun = radiusKm / R_SUN_KM;
+        } else if (remnantType === "Neutron Star") {
+          radiusKm = 11.5;
+          radiusRsun = radiusKm / R_SUN_KM;
+        } else {
+          radiusRsun = 0.0125 * Math.pow(currentMass / 0.6, -1/3);
+          radiusKm = radiusRsun * R_SUN_KM;
+        }
+      } else {
+        radiusRsun = Math.sqrt(Math.max(1e-6, L)) / Math.pow(Teff / T_SUN, 2);
+        radiusKm = radiusRsun * R_SUN_KM;
+      }
+      const radiusAU = radiusRsun * R_SUN_AU;
+
+      // STEP 3: Pure Dynamic Morgan-Keenan Classification
+      const mk = deriveMorganKeenanClass(Teff, Math.log10(Math.max(1e-6, L)), radiusRsun, phase, currentMass);
+
+      // Habitable Zone & Snowline
+      const rInHZ = isSupernova ? 0 : Math.sqrt(Math.max(1e-6, L) / S_EFF_INNER);
+      const rOutHZ = isSupernova ? 0 : Math.sqrt(Math.max(1e-6, L) / S_EFF_OUTER);
+      const snowLineAU = isSupernova ? 0 : 2.7 * Math.sqrt(Math.max(1e-6, L));
+
+      return {
+        phase,
+        spectralMK: mk.full,
+        spectralDesc: mk.sub,
+        ageGyr,
+        ageText,
+        L,
+        Teff,
+        currentMass,
+        radiusRsun,
+        radiusAU,
+        radiusKm,
+        rInHZ,
+        rOutHZ,
+        snowLineAU,
+        isPulsating,
+        isSupernova,
+        isPlanetaryNebula,
+        nebulaRadiusAU,
+        snShockRadiusAU,
+        isRemnant,
+        remnantType
+      };
+    }
+
+    function getStarColorRGB(Teff, phase) {
+      if (phase.includes("Black Hole")) return { r: 10, g: 10, b: 20, glow: 'rgba(168, 85, 247, 0.4)', hex: '#000000', cat: 'remnant' };
+      if (phase.includes("Neutron Star")) return { r: 180, g: 230, b: 255, glow: 'rgba(140, 220, 255, 0.9)', hex: '#e0f2fe', cat: 'remnant' };
+      if (phase.includes("White Dwarf")) return { r: 230, g: 240, b: 255, glow: 'rgba(200, 230, 255, 0.7)', hex: '#f0f9ff', cat: 'remnant' };
+
+      if (Teff < 3200) return { r: 255, g: 75, b: 35, glow: 'rgba(255, 60, 20, 0.65)', hex: '#ff4d26', cat: 'km' };
+      if (Teff < 4000) return { r: 255, g: 135, b: 45, glow: 'rgba(255, 120, 30, 0.55)', hex: '#ff8c00', cat: 'km' };
+      if (Teff < 5200) return { r: 255, g: 195, b: 90, glow: 'rgba(255, 185, 80, 0.45)', hex: '#ffb74d', cat: 'km' };
+      if (Teff < 6200) return { r: 255, g: 245, b: 180, glow: 'rgba(255, 240, 160, 0.40)', hex: '#fff59d', cat: 'g' };
+      if (Teff < 7600) return { r: 245, g: 248, b: 255, glow: 'rgba(240, 245, 255, 0.40)', hex: '#ffffff', cat: 'af' };
+      if (Teff < 12000) return { r: 200, g: 225, b: 255, glow: 'rgba(180, 215, 255, 0.55)', hex: '#90caf9', cat: 'af' };
+      if (Teff < 30000) return { r: 150, g: 200, b: 255, glow: 'rgba(120, 180, 255, 0.70)', hex: '#42a5f5', cat: 'ob' };
+      return { r: 140, g: 220, b: 255, glow: 'rgba(100, 210, 255, 0.85)', hex: '#29b6f6', cat: 'ob' };
+    }
+  </script>
+
+  <script>
+    /* ==========================================================================
+       2. PROCEDURAL MULTI-PLANET GENERATOR & EXOPLANET DOSSIER
+       ========================================================================== */
+    class PRNG {
+      constructor(seed = 4289) {
+        this.s = seed % 2147483647;
+        if (this.s <= 0) this.s += 2147483646;
+      }
+      next() {
+        this.s = (this.s * 16807) % 2147483647;
+        return (this.s - 1) / 2147483646;
+      }
+      nextGaussian(mean = 0, stdev = 1) {
+        let u = 1 - this.next();
+        let v = this.next();
+        let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        return mean + z * stdev;
+      }
+    }
+
+    /**
+     * Synthesizes 4 to 8 diverse planets per star with deep geophysical attributes
+     */
+    function synthesizeMultiPlanetSystem(rng, M0, starL, rInHZ, rOutHZ, metallicityDex) {
+      // 4 to 8 planets per system
+      const nPlanets = Math.floor(4 + rng.next() * 5);
+      const planets = [];
+
+      // Starting orbital distance based on stellar mass
+      let currentAU = 0.08 + (M0 * 0.25) * (0.5 + rng.next() * 0.8);
+
+      for (let i = 0; i < nPlanets; i++) {
+        // Titius-Bode / Hill stability logarithmic spacing
+        const spacingRatio = 1.35 + rng.next() * 0.65;
+        const a0 = currentAU;
+        currentAU = a0 * spacingRatio;
+
+        const ecc = Math.min(0.28, Math.pow(rng.next(), 2.5) * 0.35);
+        const incDeg = (rng.next() - 0.5) * 6.0;
+
+        // Categorize Archetype based on insolation distance & condensation
+        let type = "Terrestrial (Silicate)";
+        let massEarth = 1.0;
+        let radiusEarth = 1.0;
+        let albedo = 0.30;
+        let greenhouse = 33; // K
+        let atmosphere = "N2, O2, H2O, CO2";
+        let color = "#38bdf8";
+
+        const insolationRatio = starL / (a0 * a0);
+
+        if (a0 < 0.25 || insolationRatio > 4.0) {
+          type = rng.next() > 0.4 ? "Scorched Iron / Lava World" : "Scorched Sub-Earth";
+          massEarth = 0.3 + rng.next() * 1.5;
+          radiusEarth = Math.pow(massEarth, 0.28);
+          albedo = 0.12;
+          greenhouse = 0;
+          atmosphere = "Vacuum / Vaporized Rock (Na, SiO)";
+          color = "#f97316";
+        } else if (a0 >= rInHZ && a0 <= rOutHZ) {
+          if (rng.next() < 0.6) {
+            type = "Temperate Ocean World";
+            massEarth = 0.8 + rng.next() * 2.2;
+            radiusEarth = Math.pow(massEarth, 0.30) * 1.08;
+            albedo = 0.29;
+            greenhouse = 30 + rng.next() * 15;
+            atmosphere = "N2 (76%), O2 (21%), H2O vapor, CO2";
+            color = "#10b981";
+          } else {
+            type = "Terrestrial / Super-Earth";
+            massEarth = 1.2 + rng.next() * 3.5;
+            radiusEarth = Math.pow(massEarth, 0.29);
+            albedo = 0.33;
+            greenhouse = 40;
+            atmosphere = "CO2, N2, Trace H2O";
+            color = "#06b6d4";
+          }
+        } else if (a0 > rOutHZ && a0 < rOutHZ * 1.8) {
+          type = "Cold Desert World";
+          massEarth = 0.2 + rng.next() * 0.9;
+          radiusEarth = Math.pow(massEarth, 0.30);
+          albedo = 0.25;
+          greenhouse = 8;
+          atmosphere = "Thin CO2 (95%), N2, Ar";
+          color = "#fb923c";
+        } else if (a0 >= rOutHZ * 1.8 && a0 < 5.5) {
+          if (rng.next() < 0.5) {
+            type = "Gas Giant (Jovian)";
+            massEarth = 60 + rng.next() * 260;
+            radiusEarth = (massEarth / M_JUP_EARTH > 0.2) ? 8.5 + rng.next() * 3.0 : 6.0;
+            albedo = 0.48;
+            greenhouse = 0;
+            atmosphere = "H2 (89%), He (10%), CH4, NH3 clouds";
+            color = "#eab308";
+          } else {
+            type = "Sub-Neptune / Mini-Gas";
+            massEarth = 4.0 + rng.next() * 12.0;
+            radiusEarth = 2.2 + rng.next() * 1.6;
+            albedo = 0.38;
+            greenhouse = 0;
+            atmosphere = "H2/He envelope, H2O, CH4";
+            color = "#60a5fa";
+          }
+        } else {
+          type = rng.next() > 0.5 ? "Ice Giant" : "Frozen Dwarf";
+          massEarth = type === "Ice Giant" ? 12.0 + rng.next() * 18.0 : 0.05 + rng.next() * 0.3;
+          radiusEarth = type === "Ice Giant" ? 3.8 + rng.next() * 0.8 : 0.3 + rng.next() * 0.4;
+          albedo = 0.55;
+          greenhouse = 2;
+          atmosphere = type === "Ice Giant" ? "H2, He, CH4 Ice mantle" : "Tenuous N2, CH4 Frost";
+          color = "#c084fc";
+        }
+
+        planets.push({
+          id: i + 1,
+          name: `Planet ${String.fromCharCode(66 + i)}`,
+          a0,
+          currentA: a0,
+          ecc,
+          incDeg,
+          massEarth,
+          radiusEarth,
+          albedo,
+          greenhouse,
+          type,
+          atmosphere,
+          color,
+          angle: rng.next() * Math.PI * 2,
+          isEngulfed: false,
+          status: 'Active'
+        });
+      }
+
+      return planets;
+    }
+
+    /**
+     * Computes real-time geophysical telemetry for an exoplanet
+     */
+    function computePlanetPhysics(planet, starState, progenitorMass) {
+      // 1. Adiabatic Orbital Expansion: a(t) = a0 * (M0 / M*(t))
+      const massRatio = progenitorMass / Math.max(0.08, starState.currentMass);
+      const currentA = planet.a0 * massRatio;
+      planet.currentA = currentA;
+
+      // 2. Orbital Period (Kepler's 3rd Law: P = sqrt(a^3 / M*))
+      const periodYrs = Math.sqrt(Math.pow(currentA, 3) / Math.max(0.08, starState.currentMass));
+      const periodDays = periodYrs * 365.25;
+
+      // 3. Stellar Engulfment & Shock Check
+      if (starState.radiusAU >= currentA) {
+        planet.isEngulfed = true;
+        planet.status = "Engulfed (Vaporized)";
+      } else if (starState.isSupernova && starState.snShockRadiusAU >= currentA) {
+        planet.isEngulfed = true;
+        planet.status = "Sterilized (Supernova Shock)";
+      } else {
+        planet.isEngulfed = false;
+        if (currentA >= starState.rInHZ && currentA <= starState.rOutHZ) {
+          planet.status = "Candidate Habitable";
+        } else if (currentA < starState.rInHZ) {
+          planet.status = currentA < starState.rInHZ * 0.4 ? "Scorched" : "Runaway Greenhouse";
+        } else if (currentA <= starState.rOutHZ * 1.5) {
+          planet.status = "Cold Desert";
+        } else {
+          planet.status = "Deep Frozen";
+        }
+      }
+
+      // 4. Insolation Flux & Equilibrium Temperature
+      // Flux: S = S_sun * (L / a^2)
+      const fluxRatio = starState.L / (currentA * currentA);
+      const fluxWm2 = SOLAR_FLUX_EARTH * fluxRatio;
+
+      // Teq = Teff * sqrt(R_star_AU / (2 * a)) * (1 - albedo)^0.25
+      const teq = starState.Teff > 0 
+        ? starState.Teff * Math.sqrt(starState.radiusAU / (2 * currentA)) * Math.pow(1 - planet.albedo, 0.25)
+        : 0;
+
+      const tsurf = teq + (planet.isEngulfed ? 1500 : planet.greenhouse);
+      const tsurfC = Math.round(tsurf - 273.15);
+
+      // 5. Surface Gravity
+      // g = (M / R^2)
+      const gravityG = planet.massEarth / Math.pow(planet.radiusEarth, 2);
+
+      // 6. Tidal locking heuristic (a < 0.2 * (M*)^1/3)
+      const isTidallyLocked = currentA < 0.22 * Math.pow(starState.currentMass, 1/3);
+
+      return {
+        currentA,
+        periodDays,
+        periodYrs,
+        fluxWm2,
+        fluxRatio,
+        teq: Math.round(teq),
+        tsurf: Math.round(tsurf),
+        tsurfC,
+        gravityG: gravityG.toFixed(2),
+        isTidallyLocked,
+        status: planet.status,
+        isEngulfed: planet.isEngulfed
+      };
+    }
+  </script>
+
+  <script>
+    /* ==========================================================================
+       3. PROCEDURAL SECTOR ENGINE & 2D CANVAS VIEWPORTS
+       ========================================================================== */
+    const sectorConfig = {
+      starCount: 1000,
+      morphology: 'disk',
+      meanAgeGyr: 4.5,
+      ageSigmaGyr: 1.5,
+      metallicityDex: 0.0,
+      radiusLy: 120,
+      seed: 4289
+    };
+
+    let sectorStars = [];
+    let selectedStar = null;
+    let selectedPlanetIndex = 0;
+    let hoveredStar = null;
+    let activeFilter = 'all';
+
+    function sampleIMF(rng) {
+      const p = rng.next();
+      if (p < 0.68) return 0.08 + Math.pow(rng.next(), 1.7) * 0.42;
+      if (p < 0.92) return 0.50 + Math.pow(rng.next(), 2.2) * 0.90;
+      if (p < 0.985) return 1.40 + Math.pow(rng.next(), 2.5) * 6.6;
+      return 8.0 + Math.pow(rng.next(), 3.0) * 75.0;
+    }
+
+    function sampleCoordinates(rng, morphology, radiusLy) {
+      if (morphology === 'core') {
+        const u = rng.next();
+        const r = radiusLy * 0.35 * Math.sqrt(u / (1 - u + 1e-4));
+        const theta = rng.next() * Math.PI * 2;
+        return { x: Math.cos(theta) * Math.min(radiusLy * 1.2, r), y: Math.sin(theta) * Math.min(radiusLy * 1.2, r) };
+      } else if (morphology === 'cluster') {
+        const subCenters = [{ x: -radiusLy * 0.35, y: -radiusLy * 0.25 }, { x: radiusLy * 0.3, y: -radiusLy * 0.1 }, { x: 0, y: radiusLy * 0.35 }];
+        const center = subCenters[Math.floor(rng.next() * 3)];
+        const r = rng.nextGaussian(0, radiusLy * 0.25);
+        const theta = rng.next() * Math.PI * 2;
+        return { x: center.x + Math.cos(theta) * r, y: center.y + Math.sin(theta) * r };
+      } else if (morphology === 'halo') {
+        const r = Math.pow(rng.next(), 0.5) * radiusLy;
+        const theta = rng.next() * Math.PI * 2;
+        return { x: Math.cos(theta) * r, y: Math.sin(theta) * r };
+      } else {
+        const r = -Math.log(1 - rng.next() * 0.92) * (radiusLy * 0.45);
+        const theta = rng.next() * Math.PI * 2;
+        return { x: Math.cos(theta) * r, y: Math.sin(theta) * r };
+      }
+    }
+
+    function generateSector() {
+      const rng = new PRNG(sectorConfig.seed);
+      sectorStars = [];
+
+      for (let i = 0; i < sectorConfig.starCount; i++) {
+        const id = i + 1;
+        const name = `SEC-${String(id).padStart(4, '0')}`;
+        const coords = sampleCoordinates(rng, sectorConfig.morphology, sectorConfig.radiusLy);
+        const progenitorMass = sampleIMF(rng);
+
+        let starAgeGyr = rng.nextGaussian(sectorConfig.meanAgeGyr, sectorConfig.ageSigmaGyr);
+        starAgeGyr = Math.max(0.005, Math.min(13.5, starAgeGyr));
+
+        const tMS_Gyr = calculateMSLifetimeGyr(progenitorMass);
+        let progressPct = (starAgeGyr / tMS_Gyr) * 50.0;
+        if (progressPct > 100.0) progressPct = 100.0;
+
+        const starState = calculateStellarEvolution(progenitorMass, progressPct);
+        const colorData = getStarColorRGB(starState.Teff, starState.phase);
+
+        // Synthesize multi-planet fleet (4 to 8 planets)
+        const planets = synthesizeMultiPlanetSystem(rng, progenitorMass, starState.L, starState.rInHZ, starState.rOutHZ, sectorConfig.metallicityDex);
+        const hasHZPlanet = planets.some(p => p.a0 >= starState.rInHZ && p.a0 <= starState.rOutHZ);
+
+        sectorStars.push({
+          id,
+          name,
+          x: coords.x,
+          y: coords.y,
+          progenitorMass,
+          starAgeGyr,
+          progressPct,
+          starState,
+          colorData,
+          planets,
+          hasHZPlanet
+        });
+      }
+
+      // Default to Sol analog (around 1.0 M_sun)
+      const solAnalog = sectorStars.find(s => s.progenitorMass >= 0.98 && s.progenitorMass <= 1.05 && !s.starState.isRemnant);
+      selectedStar = solAnalog || sectorStars[0];
+      selectedPlanetIndex = 0;
+
+      updateFilterCounts();
+      updateInspectorView();
+    }
+
+    function updateFilterCounts() {
+      let ob = 0, g = 0, km = 0, remnant = 0, hz = 0;
+      sectorStars.forEach(s => {
+        if (s.colorData.cat === 'ob') ob++;
+        if (s.colorData.cat === 'g') g++;
+        if (s.colorData.cat === 'km') km++;
+        if (s.starState.isRemnant) remnant++;
+        if (s.hasHZPlanet) hz++;
+      });
+      document.getElementById('countAll').textContent = sectorStars.length;
+      document.getElementById('countOB').textContent = ob;
+      document.getElementById('countG').textContent = g;
+      document.getElementById('countKM').textContent = km;
+      document.getElementById('countRemnant').textContent = remnant;
+      document.getElementById('countHZ').textContent = hz;
+    }
+
+    /* ==========================================================================
+       4. SECTOR CANVAS & ORBIT INSPECTION CANVASES
+       ========================================================================== */
+    const sectorCanvas = document.getElementById('sectorCanvas');
+    const secCtx = sectorCanvas.getContext('2d');
+    const hrCanvas = document.getElementById('inspHRCanvas');
+    const hrCtx = hrCanvas.getContext('2d');
+    const sysCanvas = document.getElementById('inspSystemCanvas');
+    const sysCtx = sysCanvas.getContext('2d');
+
+    const sectorCam = {
+      zoom: 1.0,
+      panX: 0,
+      panY: 0,
+      isDragging: false,
+      startX: 0,
+      startY: 0
+    };
+
+    let sysAnimTimer = 0;
+
+    function resizeAllCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+      
+      const sRect = sectorCanvas.parentElement.getBoundingClientRect();
+      if (sRect.width > 0 && sRect.height > 0) {
+        sectorCanvas.width = sRect.width * dpr;
+        sectorCanvas.height = sRect.height * dpr;
+        secCtx.resetTransform?.();
+        secCtx.scale(dpr, dpr);
+        if (sectorCam.zoom === 1.0) {
+          const halfDim = Math.min(sRect.width, sRect.height) * 0.44;
+          sectorCam.zoom = halfDim / sectorConfig.radiusLy;
+        }
+      }
+
+      const hrRect = hrCanvas.parentElement.getBoundingClientRect();
+      if (hrRect.width > 0 && hrRect.height > 0) {
+        hrCanvas.width = hrRect.width * dpr;
+        hrCanvas.height = hrRect.height * dpr;
+        hrCtx.resetTransform?.();
+        hrCtx.scale(dpr, dpr);
+      }
+
+      const sysRect = sysCanvas.parentElement.getBoundingClientRect();
+      if (sysRect.width > 0 && sysRect.height > 0) {
+        sysCanvas.width = sysRect.width * dpr;
+        sysCanvas.height = sysRect.height * dpr;
+        sysCtx.resetTransform?.();
+        sysCtx.scale(dpr, dpr);
+      }
+    }
+
+    function renderSectorMap() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = sectorCanvas.width / dpr;
+      const h = sectorCanvas.height / dpr;
+      const cx = w / 2 + sectorCam.panX;
+      const cy = h / 2 + sectorCam.panY;
+
+      secCtx.fillStyle = '#02040b';
+      secCtx.fillRect(0, 0, w, h);
+
+      // Coordinate concentric range rings
+      secCtx.strokeStyle = 'rgba(30, 41, 59, 0.45)';
+      secCtx.lineWidth = 1;
+      [0.25, 0.5, 0.75, 1.0, 1.25].forEach(rf => {
+        const rPx = sectorConfig.radiusLy * rf * sectorCam.zoom;
+        if (rPx > 5 && rPx < w * 2) {
+          secCtx.beginPath();
+          secCtx.arc(cx, cy, rPx, 0, Math.PI * 2);
+          secCtx.stroke();
+        }
+      });
+
+      // Stars
+      sectorStars.forEach(star => {
+        let matchesFilter = true;
+        if (activeFilter === 'ob') matchesFilter = star.colorData.cat === 'ob';
+        else if (activeFilter === 'g') matchesFilter = star.colorData.cat === 'g';
+        else if (activeFilter === 'km') matchesFilter = star.colorData.cat === 'km';
+        else if (activeFilter === 'remnant') matchesFilter = star.starState.isRemnant;
+        else if (activeFilter === 'hz') matchesFilter = star.hasHZPlanet;
+
+        const sx = cx + star.x * sectorCam.zoom;
+        const sy = cy + star.y * sectorCam.zoom;
+
+        if (sx < -20 || sx > w + 20 || sy < -20 || sy > h + 20) return;
+
+        const isSel = selectedStar && selectedStar.id === star.id;
+        const isHov = hoveredStar && hoveredStar.id === star.id;
+
+        let baseRadius = 1.8;
+        if (star.colorData.cat === 'ob') baseRadius = 3.6;
+        else if (star.starState.L > 50) baseRadius = 3.2;
+        else if (star.colorData.cat === 'g') baseRadius = 2.4;
+
+        secCtx.save();
+        if (!matchesFilter) {
+          secCtx.fillStyle = 'rgba(71, 85, 105, 0.25)';
+          secCtx.beginPath();
+          secCtx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+          secCtx.fill();
+        } else {
+          if (star.colorData.cat === 'ob' || star.starState.L > 10 || isSel || isHov) {
+            const glowR = baseRadius * (isSel ? 5.5 : 3.5);
+            const grad = secCtx.createRadialGradient(sx, sy, baseRadius * 0.4, sx, sy, glowR);
+            grad.addColorStop(0, star.colorData.glow);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            secCtx.fillStyle = grad;
+            secCtx.beginPath();
+            secCtx.arc(sx, sy, glowR, 0, Math.PI * 2);
+            secCtx.fill();
+          }
+
+          secCtx.fillStyle = `rgb(${star.colorData.r}, ${star.colorData.g}, ${star.colorData.b})`;
+          secCtx.beginPath();
+          secCtx.arc(sx, sy, baseRadius, 0, Math.PI * 2);
+          secCtx.fill();
+
+          if (star.hasHZPlanet) {
+            secCtx.strokeStyle = 'rgba(52, 211, 153, 0.8)';
+            secCtx.lineWidth = 1;
+            secCtx.beginPath();
+            secCtx.arc(sx, sy, baseRadius + 3.0, 0, Math.PI * 2);
+            secCtx.stroke();
+          }
+        }
+
+        if (isSel) {
+          secCtx.strokeStyle = '#38bdf8';
+          secCtx.lineWidth = 1.5;
+          secCtx.beginPath();
+          secCtx.arc(sx, sy, baseRadius + 6, 0, Math.PI * 2);
+          secCtx.stroke();
+        }
+        secCtx.restore();
+      });
+
+      const scaleLy = Math.round(56 / sectorCam.zoom);
+      document.getElementById('scaleBarText').textContent = `${scaleLy} ly`;
+      document.getElementById('sectorZoomLabel').textContent = `${Math.round(w / sectorCam.zoom)} ly`;
+    }
+
+    function getStarAtCanvasPos(clientX, clientY) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = sectorCanvas.getBoundingClientRect();
+      const mx = (clientX - rect.left);
+      const my = (clientY - rect.top);
+      const w = sectorCanvas.width / dpr;
+      const h = sectorCanvas.height / dpr;
+      const cx = w / 2 + sectorCam.panX;
+      const cy = h / 2 + sectorCam.panY;
+
+      let closest = null;
+      let minDst = 12;
+
+      for (let s of sectorStars) {
+        const sx = cx + s.x * sectorCam.zoom;
+        const sy = cy + s.y * sectorCam.zoom;
+        const dst = Math.hypot(mx - sx, my - sy);
+        if (dst < minDst) {
+          minDst = dst;
+          closest = s;
+        }
+      }
+      return closest;
+    }
+  </script>
+
+  <script>
+    /* ==========================================================================
+       5. DETAILED INSPECTOR & CIRCUMSTELLAR ORBIT MAP
+       ========================================================================== */
+    function updateInspectorView() {
+      if (!selectedStar) return;
+      const star = selectedStar;
+      const state = star.starState;
+
+      // Update Star Headers & Badges
+      document.getElementById('inspStarName').textContent = `${star.name}`;
+      document.getElementById('inspMKClassificationBadge').textContent = state.spectralMK;
+      document.getElementById('inspSpectralSub').textContent = `${state.spectralDesc} • Age: ${state.ageText}`;
+      document.getElementById('inspSpectralPill').style.backgroundColor = star.colorData.hex;
+      document.getElementById('inspPhaseTag').textContent = state.phase.split('(')[0].trim();
+
+      document.getElementById('inspProgenitorMass').textContent = `${star.progenitorMass.toFixed(2)} M☉`;
+      document.getElementById('inspCurrentMass').textContent = `${state.currentMass.toFixed(2)} M☉`;
+      document.getElementById('inspLum').textContent = `${state.L >= 100 ? Math.round(state.L).toLocaleString() : state.L.toFixed(2)} L☉`;
+      document.getElementById('inspTeff').textContent = state.Teff > 0 ? `${Math.round(state.Teff).toLocaleString()} K` : "Singularity (0 K)";
+
+      // Stefan-Boltzmann Radius
+      let radText = "";
+      if (state.radiusRsun < 0.0001) {
+        radText = `${state.radiusKm.toFixed(1)} km (Compact)`;
+      } else if (state.radiusRsun < 0.1) {
+        radText = `${state.radiusRsun.toFixed(4)} R☉ (${(state.radiusKm / R_EARTH_KM).toFixed(1)} R⊕)`;
+      } else if (state.radiusAU >= 0.05) {
+        radText = `${state.radiusRsun.toFixed(1)} R☉ (${state.radiusAU.toFixed(2)} AU)`;
+      } else {
+        radText = `${state.radiusRsun.toFixed(3)} R☉`;
+      }
+      document.getElementById('inspRadius').textContent = radText;
+      document.getElementById('inspHZ').textContent = state.isSupernova ? "Sterilized (SN)" : `${state.rInHZ.toFixed(2)} - ${state.rOutHZ.toFixed(2)} AU`;
+      document.getElementById('inspAgeDisplay').textContent = `${state.ageText} (${state.phase.split('(')[0].trim()})`;
+
+      document.getElementById('inspTimelineSlider').value = star.progressPct.toFixed(2);
+      document.getElementById('inspPlanetCountBadge').textContent = `${star.planets.length} Planets`;
+
+      // Update Selected Planet Dossier Card
+      if (selectedPlanetIndex >= star.planets.length) selectedPlanetIndex = 0;
+      const curPlanet = star.planets[selectedPlanetIndex];
+      const pPhys = computePlanetPhysics(curPlanet, state, star.progenitorMass);
+
+      document.getElementById('pdName').textContent = curPlanet.name;
+      document.getElementById('pdType').textContent = curPlanet.type;
+      document.getElementById('pdColorDot').style.backgroundColor = curPlanet.color;
+      document.getElementById('pdDist').textContent = `${pPhys.currentA.toFixed(2)} AU`;
+      document.getElementById('pdPeriod').textContent = pPhys.periodDays >= 1000 ? `${(pPhys.periodDays / 365.25).toFixed(1)} yr` : `${Math.round(pPhys.periodDays)} d`;
+      document.getElementById('pdEcc').textContent = curPlanet.ecc.toFixed(3);
+      document.getElementById('pdMass').textContent = curPlanet.massEarth >= 10 ? `${(curPlanet.massEarth / M_JUP_EARTH).toFixed(2)} MJ (${curPlanet.massEarth.toFixed(1)} M⊕)` : `${curPlanet.massEarth.toFixed(2)} M⊕`;
+      document.getElementById('pdRadius').textContent = curPlanet.radiusEarth >= 6 ? `${(curPlanet.radiusEarth / R_JUP_EARTH).toFixed(2)} RJ` : `${curPlanet.radiusEarth.toFixed(2)} R⊕`;
+      document.getElementById('pdGravity').textContent = `${pPhys.gravityG} g`;
+      document.getElementById('pdFlux').textContent = `${Math.round(pPhys.fluxWm2).toLocaleString()} W/m² (${pPhys.fluxRatio.toFixed(2)} S☉)`;
+      document.getElementById('pdTeq').textContent = `${pPhys.teq} K`;
+      document.getElementById('pdTsurf').textContent = `${pPhys.tsurf} K (${pPhys.tsurfC}°C)`;
+      document.getElementById('pdAtmosphere').textContent = curPlanet.atmosphere;
+      document.getElementById('pdTidalLock').textContent = pPhys.isTidallyLocked ? "Tidally Locked (1:1)" : "Standard Diurnal Rotation";
+
+      // Habitability badge style
+      const badge = document.getElementById('pdHabStatusBadge');
+      badge.textContent = pPhys.status;
+      if (pPhys.isEngulfed) {
+        badge.className = "px-2 py-0.2 rounded text-[9px] font-mono border font-bold bg-rose-950 text-rose-300 border-rose-800";
+      } else if (pPhys.status === "Candidate Habitable") {
+        badge.className = "px-2 py-0.2 rounded text-[9px] font-mono border font-bold bg-emerald-950 text-emerald-300 border-emerald-700 animate-pulse";
+      } else if (pPhys.status.includes("Scorched") || pPhys.status.includes("Runaway")) {
+        badge.className = "px-2 py-0.2 rounded text-[9px] font-mono border font-bold bg-orange-950 text-orange-300 border-orange-800";
+      } else {
+        badge.className = "px-2 py-0.2 rounded text-[9px] font-mono border font-bold bg-slate-900 text-slate-300 border-slate-750";
+      }
+
+      // Populate Planet List
+      const pList = document.getElementById('inspPlanetList');
+      pList.innerHTML = star.planets.map((p, idx) => {
+        const phys = computePlanetPhysics(p, state, star.progenitorMass);
+        const isCurrent = idx === selectedPlanetIndex;
+        let itemBadge = "bg-blue-950 text-blue-300 border-blue-800";
+        if (phys.isEngulfed) itemBadge = "bg-rose-950 text-rose-300 border-rose-800";
+        else if (phys.status === "Candidate Habitable") itemBadge = "bg-emerald-950 text-emerald-300 border-emerald-700 animate-pulse";
+        else if (phys.status.includes("Scorched") || phys.status.includes("Runaway")) itemBadge = "bg-orange-950 text-orange-300 border-orange-800";
+        else itemBadge = "bg-slate-900 text-slate-300 border-slate-750";
+
+        return `
+          <button onclick="selectPlanet(${idx})" class="px-2 py-1 rounded ${isCurrent ? 'bg-cyan-950/80 border-cyan-500' : 'bg-slate-900/60 border-slate-800/80'} border flex items-center justify-between text-[9.5px] font-mono transition hover:bg-slate-800 text-left">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full" style="background:${p.color}"></span>
+              <span class="text-slate-200 font-bold">${p.name}</span>
+              <span class="text-slate-400">(${phys.currentA.toFixed(2)} AU)</span>
+            </div>
+            <span class="px-1.5 py-0.2 rounded text-[8px] border ${itemBadge}">${phys.status}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.selectPlanet = function(index) {
+      selectedPlanetIndex = index;
+      updateInspectorView();
+    };
+
+    function renderInspectorHR() {
+      if (!selectedStar) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = hrCanvas.width / dpr;
+      const h = hrCanvas.height / dpr;
+
+      hrCtx.fillStyle = '#02050e';
+      hrCtx.fillRect(0, 0, w, h);
+
+      const logTeffLeft = Math.log10(50000);
+      const logTeffRight = Math.log10(2000);
+      const logLMin = -4.5;
+      const logLMax = 6.2;
+
+      const padL = 26, padR = 8, padT = 8, padB = 14;
+      const plotW = w - padL - padR;
+      const plotH = h - padT - padB;
+
+      function toXY(teff, lum) {
+        const logT = Math.log10(Math.max(1800, teff));
+        const logL = Math.log10(Math.max(1e-5, Math.min(1e7, lum)));
+        const x = padL + ((logTeffLeft - logT) / (logTeffLeft - logTeffRight)) * plotW;
+        const y = padT + ((logLMax - logL) / (logLMax - logLMin)) * plotH;
+        return {
+          x: Math.max(padL, Math.min(padL + plotW, x)),
+          y: Math.max(padT, Math.min(padT + plotH, y))
+        };
+      }
+
+      // Grid
+      hrCtx.strokeStyle = 'rgba(51, 65, 85, 0.3)';
+      hrCtx.lineWidth = 1;
+      for (let p = -4; p <= 6; p += 2) {
+        const pt = toXY(10000, Math.pow(10, p));
+        hrCtx.beginPath();
+        hrCtx.moveTo(padL, pt.y);
+        hrCtx.lineTo(padL + plotW, pt.y);
+        hrCtx.stroke();
+      }
+
+      // Instability strip
+      const pTopL = toXY(6800, 1e6);
+      const pBotR = toXY(5000, 10);
+      hrCtx.fillStyle = 'rgba(244, 63, 94, 0.08)';
+      hrCtx.fillRect(pTopL.x, pTopL.y, pBotR.x - pTopL.x, pBotR.y - pTopL.y);
+
+      // Current evolutionary track
+      hrCtx.strokeStyle = '#38bdf8';
+      hrCtx.lineWidth = 1.5;
+      hrCtx.beginPath();
+      for (let s = 0; s <= 60; s++) {
+        const testState = calculateStellarEvolution(selectedStar.progenitorMass, (s / 60) * 100.0);
+        if (testState.Teff > 0) {
+          const pt = toXY(testState.Teff, testState.L);
+          if (s === 0) hrCtx.moveTo(pt.x, pt.y);
+          else hrCtx.lineTo(pt.x, pt.y);
+        }
+      }
+      hrCtx.stroke();
+
+      // Current position locus
+      const cur = toXY(selectedStar.starState.Teff, selectedStar.starState.L);
+      hrCtx.fillStyle = '#f43f5e';
+      hrCtx.beginPath();
+      hrCtx.arc(cur.x, cur.y, 3.5, 0, Math.PI * 2);
+      hrCtx.fill();
+      hrCtx.strokeStyle = '#ffffff';
+      hrCtx.lineWidth = 1.2;
+      hrCtx.stroke();
+
+      document.getElementById('inspHRCoords').textContent = `log L: ${Math.log10(Math.max(1e-5, selectedStar.starState.L)).toFixed(1)} | ${selectedStar.starState.spectralMK}`;
+    }
+
+    function renderInspectorSystem() {
+      if (!selectedStar) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = sysCanvas.width / dpr;
+      const h = sysCanvas.height / dpr;
+      const cx = w / 2;
+      const cy = h / 2;
+      sysAnimTimer++;
+
+      sysCtx.fillStyle = '#02040b';
+      sysCtx.fillRect(0, 0, w, h);
+
+      const state = selectedStar.starState;
+      const lastPlanet = selectedStar.planets[selectedStar.planets.length - 1];
+      const maxAU = Math.max(lastPlanet.currentA * 1.15, state.rOutHZ * 1.35, 2.5);
+      const pxPerAU = (Math.min(w, h) * 0.44) / maxAU;
+
+      // Inward Kopparapu Habitable Zone Band
+      if (!state.isSupernova && state.rOutHZ > 0) {
+        const rInPx = state.rInHZ * pxPerAU;
+        const rOutPx = state.rOutHZ * pxPerAU;
+        sysCtx.beginPath();
+        sysCtx.arc(cx, cy, rOutPx, 0, Math.PI * 2);
+        sysCtx.arc(cx, cy, Math.max(0.5, rInPx), 0, Math.PI * 2, true);
+        sysCtx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+        sysCtx.fill();
+
+        sysCtx.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+        sysCtx.lineWidth = 1;
+        sysCtx.stroke();
+      }
+
+      // Planetary Orbits
+      selectedStar.planets.forEach((p, idx) => {
+        const phys = computePlanetPhysics(p, state, selectedStar.progenitorMass);
+        const rPx = phys.currentA * pxPerAU;
+
+        sysCtx.strokeStyle = phys.isEngulfed ? 'rgba(239, 68, 68, 0.15)' : (idx === selectedPlanetIndex ? 'rgba(56, 189, 248, 0.6)' : 'rgba(51, 65, 85, 0.4)');
+        sysCtx.lineWidth = idx === selectedPlanetIndex ? 1.5 : 1;
+        sysCtx.beginPath();
+        sysCtx.arc(cx, cy, rPx, 0, Math.PI * 2);
+        sysCtx.stroke();
+
+        if (!phys.isEngulfed) {
+          p.angle += 0.015 * Math.sqrt(Math.max(0.1, state.currentMass) / Math.pow(phys.currentA, 3));
+          const px = cx + Math.cos(p.angle) * rPx;
+          const py = cy + Math.sin(p.angle) * rPx;
+
+          sysCtx.fillStyle = p.color;
+          sysCtx.beginPath();
+          sysCtx.arc(px, py, idx === selectedPlanetIndex ? 4.5 : 3, 0, Math.PI * 2);
+          sysCtx.fill();
+
+          if (idx === selectedPlanetIndex) {
+            sysCtx.strokeStyle = '#ffffff';
+            sysCtx.lineWidth = 1.2;
+            sysCtx.stroke();
+          }
+        }
+      });
+
+      // Host Star Photosphere
+      let rVis = Math.max(3.5, state.radiusAU * pxPerAU);
+      if (state.isPulsating) rVis *= (1.0 + 0.18 * Math.sin(sysAnimTimer * 0.15));
+
+      sysCtx.fillStyle = selectedStar.colorData.hex;
+      sysCtx.beginPath();
+      sysCtx.arc(cx, cy, rVis, 0, Math.PI * 2);
+      sysCtx.fill();
+    }
+  </script>
+
+  <script>
+    /* ==========================================================================
+       6. MASTER BINDINGS & USER INTERACTION
+       ========================================================================== */
+    function masterLoop() {
+      renderSectorMap();
+      renderInspectorHR();
+      renderInspectorSystem();
+      requestAnimationFrame(masterLoop);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      resizeAllCanvases();
+      window.addEventListener('resize', resizeAllCanvases);
+
+      generateSector();
+
+      // Controls
+      document.getElementById('btnRegenerate').addEventListener('click', () => {
+        sectorConfig.seed = Math.floor(Math.random() * 90000) + 1000;
+        document.getElementById('currentSeedText').textContent = sectorConfig.seed;
+        generateSector();
+      });
+
+      document.getElementById('btnRandomSeed').addEventListener('click', () => {
+        sectorConfig.seed = Math.floor(Math.random() * 90000) + 1000;
+        document.getElementById('currentSeedText').textContent = sectorConfig.seed;
+        generateSector();
+      });
+
+      document.getElementById('sliderStarCount').addEventListener('input', (e) => {
+        sectorConfig.starCount = parseInt(e.target.value);
+        document.getElementById('labelStarCount').textContent = sectorConfig.starCount.toLocaleString();
+        document.getElementById('sectorSummaryBadge').textContent = `${sectorConfig.starCount.toLocaleString()} Stars • ${document.getElementById('selectMorphology').options[document.getElementById('selectMorphology').selectedIndex].text.split('(')[0]}`;
+      });
+
+      document.getElementById('selectMorphology').addEventListener('change', (e) => {
+        sectorConfig.morphology = e.target.value;
+      });
+
+      document.getElementById('sliderMeanAge').addEventListener('input', (e) => {
+        sectorConfig.meanAgeGyr = parseFloat(e.target.value);
+        document.getElementById('labelMeanAge').textContent = sectorConfig.meanAgeGyr >= 1.0 
+          ? `${sectorConfig.meanAgeGyr.toFixed(1)} Gyr` 
+          : `${Math.round(sectorConfig.meanAgeGyr * 1000)} Myr`;
+      });
+
+      document.getElementById('sliderAgeSigma').addEventListener('input', (e) => {
+        sectorConfig.ageSigmaGyr = parseFloat(e.target.value);
+        document.getElementById('labelAgeSigma').textContent = `${sectorConfig.ageSigmaGyr.toFixed(1)} Gyr`;
+      });
+
+      document.getElementById('sliderMetallicity').addEventListener('input', (e) => {
+        sectorConfig.metallicityDex = parseFloat(e.target.value);
+        document.getElementById('labelMetallicity').textContent = `${sectorConfig.metallicityDex >= 0 ? '+' : ''}${sectorConfig.metallicityDex.toFixed(2)} dex`;
+      });
+
+      document.getElementById('sliderSectorRadius').addEventListener('input', (e) => {
+        sectorConfig.radiusLy = parseInt(e.target.value);
+        document.getElementById('labelSectorRadius').textContent = `${sectorConfig.radiusLy} Light-Years`;
+        const rect = sectorCanvas.getBoundingClientRect();
+        const halfDim = Math.min(rect.width, rect.height) * 0.44;
+        sectorCam.zoom = halfDim / sectorConfig.radiusLy;
+      });
+
+      // Filter chips
+      document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          activeFilter = e.currentTarget.getAttribute('data-filter');
+          document.querySelectorAll('.filter-chip').forEach(b => {
+            b.className = 'filter-chip px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10.5px] transition';
+          });
+          e.currentTarget.className = 'filter-chip px-2 py-1 rounded bg-cyan-700 text-white font-bold border border-cyan-400 text-[10.5px] transition shadow';
+        });
+      });
+
+      // Random Target Finder
+      document.getElementById('btnFindInteresting').addEventListener('click', () => {
+        const interesting = sectorStars.filter(s => s.hasHZPlanet || s.colorData.cat === 'ob' || s.starState.isRemnant);
+        selectedStar = (interesting.length > 0) 
+          ? interesting[Math.floor(Math.random() * interesting.length)]
+          : sectorStars[Math.floor(Math.random() * sectorStars.length)];
+        selectedPlanetIndex = 0;
+        updateInspectorView();
+      });
+
+      // Live Evolution Scrubbing Slider
+      document.getElementById('inspTimelineSlider').addEventListener('input', (e) => {
+        if (!selectedStar) return;
+        selectedStar.progressPct = parseFloat(e.target.value);
+        selectedStar.starState = calculateStellarEvolution(selectedStar.progenitorMass, selectedStar.progressPct);
+        selectedStar.colorData = getStarColorRGB(selectedStar.starState.Teff, selectedStar.starState.phase);
+        updateInspectorView();
+      });
+
+      // Canvas pan/zoom
+      document.getElementById('btnSectorZoomIn').addEventListener('click', () => sectorCam.zoom *= 1.25);
+      document.getElementById('btnSectorZoomOut').addEventListener('click', () => sectorCam.zoom /= 1.25);
+      document.getElementById('btnSectorReset').addEventListener('click', () => {
+        sectorCam.panX = 0;
+        sectorCam.panY = 0;
+        const rect = sectorCanvas.getBoundingClientRect();
+        const halfDim = Math.min(rect.width, rect.height) * 0.44;
+        sectorCam.zoom = halfDim / sectorConfig.radiusLy;
+      });
+
+      sectorCanvas.addEventListener('mousedown', (e) => {
+        sectorCam.isDragging = true;
+        sectorCam.startX = e.clientX - sectorCam.panX;
+        sectorCam.startY = e.clientY - sectorCam.panY;
+      });
+
+      window.addEventListener('mouseup', () => sectorCam.isDragging = false);
+
+      sectorCanvas.addEventListener('mousemove', (e) => {
+        if (sectorCam.isDragging) {
+          sectorCam.panX = e.clientX - sectorCam.startX;
+          sectorCam.panY = e.clientY - sectorCam.startY;
+        }
+
+        const hovered = getStarAtCanvasPos(e.clientX, e.clientY);
+        const tt = document.getElementById('starHoverTooltip');
+
+        if (hovered) {
+          hoveredStar = hovered;
+          const rect = sectorCanvas.getBoundingClientRect();
+          tt.style.left = `${e.clientX - rect.left + 14}px`;
+          tt.style.top = `${e.clientY - rect.top + 14}px`;
+          tt.classList.remove('hidden');
+
+          document.getElementById('ttStarName').textContent = hovered.name;
+          document.getElementById('ttStarSpec').textContent = `${hovered.starState.spectralMK} • ${hovered.progenitorMass.toFixed(2)} M☉`;
+          document.getElementById('ttStarPlanets').textContent = `${hovered.planets.length} Exoplanets ${hovered.hasHZPlanet ? '(HZ Life!)' : ''}`;
+        } else {
+          hoveredStar = null;
+          tt.classList.add('hidden');
+        }
+      });
+
+      sectorCanvas.addEventListener('click', (e) => {
+        const clicked = getStarAtCanvasPos(e.clientX, e.clientY);
+        if (clicked) {
+          selectedStar = clicked;
+          selectedPlanetIndex = 0;
+          updateInspectorView();
+        }
+      });
+
+      sectorCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+        sectorCam.zoom = Math.max(0.1, Math.min(25.0, sectorCam.zoom * zoomFactor));
+      }, { passive: false });
+
+      // Click on circumstellar orbit canvas to cycle planets
+      sysCanvas.addEventListener('click', () => {
+        if (selectedStar && selectedStar.planets.length > 0) {
+          selectedPlanetIndex = (selectedPlanetIndex + 1) % selectedStar.planets.length;
+          updateInspectorView();
+        }
+      });
+
+      requestAnimationFrame(masterLoop);
+    });
+  </script>
+</body>
+</html>

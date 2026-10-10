@@ -1,0 +1,262 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  FilterCategory,
+  SectorConfiguration,
+  StarSystem,
+} from './types/astrophysics';
+import { generateSectorStars } from './core/generation/sector';
+import { calculateStellarEvolution } from './core/astrophysics/evolution';
+import { getStarColorRGB } from './core/astrophysics/colors';
+import { Header } from './components/ui/Header';
+import { SectorControls } from './components/ui/SectorControls';
+import { SectorView3D } from './components/canvas/SectorView3D';
+import { StellarInspector } from './components/ui/StellarInspector';
+
+export const App: React.FC = () => {
+  const [config, setConfig] = useState<SectorConfiguration>({
+    starCount: 1000,
+    morphology: 'disk',
+    meanAgeGyr: 4.5,
+    ageSigmaGyr: 1.5,
+    metallicityDex: 0.0,
+    radiusLy: 120,
+    seed: 4289,
+  });
+
+  const [stars, setStars] = useState<StarSystem[]>([]);
+  const [selectedStar, setSelectedStar] = useState<StarSystem | null>(null);
+  const [selectedPlanetIndex, setSelectedPlanetIndex] = useState<number>(0);
+  const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
+
+  // Resizable columns width state (percentages)
+  const [colWidths, setColWidths] = useState(() => {
+    try {
+      const saved = localStorage.getItem('zook_astro_col_widths');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { left: 23, center: 41, right: 36 };
+  });
+
+  const mainContainerRef = useRef<HTMLElement>(null);
+  const draggingDividerRef = useRef<'left' | 'right' | null>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!draggingDividerRef.current || !mainContainerRef.current) return;
+      const rect = mainContainerRef.current.getBoundingClientRect();
+      const totalWidth = rect.width;
+      if (totalWidth <= 0) return;
+
+      const mouseX = Math.max(0, Math.min(totalWidth, e.clientX - rect.left));
+      const mouseXPct = (mouseX / totalWidth) * 100;
+
+      if (draggingDividerRef.current === 'left') {
+        const newLeft = Math.max(14, Math.min(38, mouseXPct));
+        const newCenter = Math.max(20, 100 - newLeft - colWidths.right);
+        const updated = { left: newLeft, center: newCenter, right: colWidths.right };
+        setColWidths(updated);
+        try {
+          localStorage.setItem('zook_astro_col_widths', JSON.stringify(updated));
+        } catch {}
+      } else if (draggingDividerRef.current === 'right') {
+        const newRight = Math.max(20, Math.min(55, 100 - mouseXPct));
+        const newCenter = Math.max(20, 100 - colWidths.left - newRight);
+        const updated = { left: colWidths.left, center: newCenter, right: newRight };
+        setColWidths(updated);
+        try {
+          localStorage.setItem('zook_astro_col_widths', JSON.stringify(updated));
+        } catch {}
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (draggingDividerRef.current) {
+        draggingDividerRef.current = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [colWidths]);
+
+  const startDrag = (divider: 'left' | 'right') => {
+    draggingDividerRef.current = divider;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const resetColWidths = () => {
+    const def = { left: 23, center: 41, right: 36 };
+    setColWidths(def);
+    try {
+      localStorage.setItem('zook_astro_col_widths', JSON.stringify(def));
+    } catch {}
+  };
+
+  // Sector Generation
+  const handleRegenerate = useCallback((currentConfig = config) => {
+    const generated = generateSectorStars(currentConfig);
+    setStars(generated);
+
+    // Default to a 1.0 M_sun Solar analog if present
+    const solAnalog = generated.find(
+      (s) =>
+        s.progenitorMass >= 0.98 &&
+        s.progenitorMass <= 1.05 &&
+        !s.starState.isRemnant
+    );
+    setSelectedStar(solAnalog || generated[0] || null);
+    setSelectedPlanetIndex(0);
+  }, [config]);
+
+  // Initial load
+  useEffect(() => {
+    handleRegenerate(config);
+  }, []);
+
+  // Update seed
+  const handleNewSeed = () => {
+    const newSeed = Math.floor(Math.random() * 90000) + 1000;
+    const newConfig = { ...config, seed: newSeed };
+    setConfig(newConfig);
+    handleRegenerate(newConfig);
+  };
+
+  // Live timeline scrubbing
+  const handleScrubProgress = (progressPct: number) => {
+    if (!selectedStar) return;
+    const newStarState = calculateStellarEvolution(
+      selectedStar.progenitorMass,
+      progressPct
+    );
+    const newColorData = getStarColorRGB(newStarState.Teff, newStarState.phase);
+
+    const updatedStar: StarSystem = {
+      ...selectedStar,
+      progressPct,
+      starState: newStarState,
+      colorData: newColorData,
+    };
+
+    setSelectedStar(updatedStar);
+    setStars((prev) =>
+      prev.map((s) => (s.id === updatedStar.id ? updatedStar : s))
+    );
+  };
+
+  // Find random interesting target
+  const handleRandomTarget = () => {
+    if (stars.length === 0) return;
+    const interesting = stars.filter(
+      (s) =>
+        s.hasHZPlanet ||
+        s.colorData.cat === 'ob' ||
+        s.starState.isRemnant
+    );
+    const target =
+      interesting.length > 0
+        ? interesting[Math.floor(Math.random() * interesting.length)]
+        : stars[Math.floor(Math.random() * stars.length)];
+    setSelectedStar(target);
+    setSelectedPlanetIndex(0);
+  };
+
+  const morphologyLabels: Record<string, string> = {
+    disk: 'Thin Disk',
+    core: 'Globular Core',
+    cluster: 'Open Cluster',
+    halo: 'Galactic Halo',
+  };
+
+  return (
+    <div className="h-screen w-screen flex flex-col p-2 gap-2 bg-[#03050c]">
+      {/* SEC-01: Top Header Command Bar */}
+      <Header
+        stars={stars}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+        onRandomTarget={handleRandomTarget}
+        starCount={config.starCount}
+        morphologyLabel={morphologyLabels[config.morphology] || 'Sector'}
+      />
+
+      {/* Main Multi-Column Viewport with Interactive Split-Pane Drag Handles */}
+      <main
+        ref={mainContainerRef}
+        className="w-full flex-1 flex flex-row gap-0 min-h-0 relative overflow-hidden select-none"
+      >
+        {/* SEC-02: LEFT PANEL - Sector Controls */}
+        <div
+          style={{ width: `${colWidths.left}%` }}
+          className="h-full flex flex-col min-w-[210px] flex-shrink-0"
+        >
+          <SectorControls
+            config={config}
+            onChangeConfig={(newCfg) => {
+              setConfig(newCfg);
+              handleRegenerate(newCfg);
+            }}
+            onRegenerate={() => handleRegenerate(config)}
+            onNewSeed={handleNewSeed}
+          />
+        </div>
+
+        {/* DRAGGABLE RESIZE DIVIDER 1 */}
+        <div
+          onMouseDown={() => startDrag('left')}
+          onDoubleClick={resetColWidths}
+          title="Drag horizontally to resize Left & Center panels • Double-click to reset"
+          className="w-2 hover:w-2.5 h-full cursor-col-resize flex items-center justify-center group z-30 transition-all flex-shrink-0 px-0.5"
+        >
+          <div className="w-1 h-12 bg-slate-700/80 group-hover:bg-cyan-400 group-hover:h-20 group-hover:w-1.5 rounded-full transition-all shadow-sm" />
+        </div>
+
+        {/* SEC-03: CENTER PANEL - 3D Three.js Interactive Sector Canvas */}
+        <section
+          style={{ width: `${colWidths.center}%` }}
+          className="h-full flex-1 rounded-xl glass-hud border border-slate-800/80 flex flex-col relative overflow-hidden min-w-[240px]"
+        >
+          <SectorView3D
+            stars={stars}
+            selectedStar={selectedStar}
+            onSelectStar={(s) => {
+              setSelectedStar(s);
+              setSelectedPlanetIndex(0);
+            }}
+            activeFilter={activeFilter}
+            radiusLy={config.radiusLy}
+          />
+        </section>
+
+        {/* DRAGGABLE RESIZE DIVIDER 2 */}
+        <div
+          onMouseDown={() => startDrag('right')}
+          onDoubleClick={resetColWidths}
+          title="Drag horizontally to resize Center & Right panels • Double-click to reset"
+          className="w-2 hover:w-2.5 h-full cursor-col-resize flex items-center justify-center group z-30 transition-all flex-shrink-0 px-0.5"
+        >
+          <div className="w-1 h-12 bg-slate-700/80 group-hover:bg-cyan-400 group-hover:h-20 group-hover:w-1.5 rounded-full transition-all shadow-sm" />
+        </div>
+
+        {/* SEC-04 through SEC-09: RIGHT PANEL - Deep Stellar & Planetary System Inspector */}
+        <div
+          style={{ width: `${colWidths.right}%` }}
+          className="h-full flex flex-col min-w-[280px] flex-shrink-0"
+        >
+          <StellarInspector
+            selectedStar={selectedStar}
+            onScrubProgress={handleScrubProgress}
+            selectedPlanetIndex={selectedPlanetIndex}
+            onSelectPlanet={setSelectedPlanetIndex}
+          />
+        </div>
+      </main>
+    </div>
+  );
+};
