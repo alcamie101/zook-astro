@@ -111,3 +111,5 @@ export interface SectorConfiguration {
   radiusLy: number;
   seed: number;
 }
+
+export type ActiveAppMode = 'sector-3d' | 'astro-architect' | 'classic-simulator';

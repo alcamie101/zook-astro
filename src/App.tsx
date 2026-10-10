@@ -3,6 +3,7 @@ import {
   FilterCategory,
   SectorConfiguration,
   StarSystem,
+  ActiveAppMode,
 } from './types/astrophysics';
 import { generateSectorStars } from './core/generation/sector';
 import { calculateStellarEvolution } from './core/astrophysics/evolution';
@@ -12,8 +13,10 @@ import { SectorControls } from './components/ui/SectorControls';
 import { SectorView3D } from './components/canvas/SectorView3D';
 import { StellarInspector } from './components/ui/StellarInspector';
 import { useResizableColumns } from './hooks/useResizableColumns';
+import { EmbeddedAppView } from './components/ui/EmbeddedAppView';
 
 export const App: React.FC = () => {
+  const [activeApp, setActiveApp] = useState<ActiveAppMode>('sector-3d');
   const [config, setConfig] = useState<SectorConfiguration>({
     starCount: 1000,
     morphology: 'disk',
@@ -117,79 +120,103 @@ export const App: React.FC = () => {
         onRandomTarget={handleRandomTarget}
         starCount={config.starCount}
         morphologyLabel={morphologyLabels[config.morphology] || 'Sector'}
+        activeApp={activeApp}
+        onSelectApp={setActiveApp}
       />
 
-      {/* Main Multi-Column Viewport with Interactive Split-Pane Drag Handles */}
-      <main
-        ref={mainContainerRef}
-        className="w-full flex-1 flex flex-row gap-0 min-h-0 relative overflow-hidden select-none"
-      >
-        {/* SEC-02: LEFT PANEL - Sector Controls */}
-        <div
-          style={{ width: `${colWidths.left}%` }}
-          className="h-full flex flex-col min-w-[210px] flex-shrink-0"
+      {/* Main Multi-App Viewport */}
+      {activeApp === 'sector-3d' ? (
+        <main
+          ref={mainContainerRef}
+          className="w-full flex-1 flex flex-row gap-0 min-h-0 relative overflow-hidden select-none"
         >
-          <SectorControls
-            config={config}
-            onChangeConfig={(newCfg) => {
-              setConfig(newCfg);
-              handleRegenerate(newCfg);
-            }}
-            onRegenerate={() => handleRegenerate(config)}
-            onNewSeed={handleNewSeed}
+          {/* SEC-02: LEFT PANEL - Sector Controls */}
+          <div
+            style={{ width: `${colWidths.left}%` }}
+            className="h-full flex flex-col min-w-[210px] flex-shrink-0"
+          >
+            <SectorControls
+              config={config}
+              onChangeConfig={(newCfg) => {
+                setConfig(newCfg);
+                handleRegenerate(newCfg);
+              }}
+              onRegenerate={() => handleRegenerate(config)}
+              onNewSeed={handleNewSeed}
+            />
+          </div>
+
+          {/* DRAGGABLE RESIZE DIVIDER 1 */}
+          <div
+            onMouseDown={() => startDrag('left')}
+            onDoubleClick={resetColWidths}
+            title="Drag horizontally to resize Left & Center panels • Double-click to reset"
+            className="w-2 hover:w-2.5 h-full cursor-col-resize flex items-center justify-center group z-30 transition-all flex-shrink-0 px-0.5"
+          >
+            <div className="w-1 h-12 bg-slate-700/80 group-hover:bg-cyan-400 group-hover:h-20 group-hover:w-1.5 rounded-full transition-all shadow-sm" />
+          </div>
+
+          {/* SEC-03: CENTER PANEL - 3D Three.js Interactive Sector Canvas */}
+          <section
+            style={{ width: `${colWidths.center}%` }}
+            className="h-full flex-1 rounded-xl glass-hud border border-slate-800/80 flex flex-col relative overflow-hidden min-w-[240px]"
+          >
+            <SectorView3D
+              stars={stars}
+              selectedStar={selectedStar}
+              onSelectStar={(s) => {
+                setSelectedStar(s);
+                setSelectedPlanetIndex(0);
+              }}
+              activeFilter={activeFilter}
+              radiusLy={config.radiusLy}
+            />
+          </section>
+
+          {/* DRAGGABLE RESIZE DIVIDER 2 */}
+          <div
+            onMouseDown={() => startDrag('right')}
+            onDoubleClick={resetColWidths}
+            title="Drag horizontally to resize Center & Right panels • Double-click to reset"
+            className="w-2 hover:w-2.5 h-full cursor-col-resize flex items-center justify-center group z-30 transition-all flex-shrink-0 px-0.5"
+          >
+            <div className="w-1 h-12 bg-slate-700/80 group-hover:bg-cyan-400 group-hover:h-20 group-hover:w-1.5 rounded-full transition-all shadow-sm" />
+          </div>
+
+          {/* SEC-04 through SEC-09: RIGHT PANEL - Deep Stellar & Planetary System Inspector */}
+          <div
+            style={{ width: `${colWidths.right}%` }}
+            className="h-full flex flex-col min-w-[280px] flex-shrink-0"
+          >
+            <StellarInspector
+              selectedStar={selectedStar}
+              onScrubProgress={handleScrubProgress}
+              selectedPlanetIndex={selectedPlanetIndex}
+              onSelectPlanet={setSelectedPlanetIndex}
+            />
+          </div>
+        </main>
+      ) : activeApp === 'astro-architect' ? (
+        <main className="w-full flex-1 min-h-0 relative">
+          <EmbeddedAppView
+            title="Galactic Astro-Architect & Stellar Cartographer"
+            badge="Galaxy Cartographer & Exporter"
+            description="Visual Hierarchy Editor, Orrery Simulation & Stellaris Mod Script Generator"
+            src="/apps/astro-architect.html"
+            onBackToSimulator={() => setActiveApp('sector-3d')}
           />
-        </div>
-
-        {/* DRAGGABLE RESIZE DIVIDER 1 */}
-        <div
-          onMouseDown={() => startDrag('left')}
-          onDoubleClick={resetColWidths}
-          title="Drag horizontally to resize Left & Center panels • Double-click to reset"
-          className="w-2 hover:w-2.5 h-full cursor-col-resize flex items-center justify-center group z-30 transition-all flex-shrink-0 px-0.5"
-        >
-          <div className="w-1 h-12 bg-slate-700/80 group-hover:bg-cyan-400 group-hover:h-20 group-hover:w-1.5 rounded-full transition-all shadow-sm" />
-        </div>
-
-        {/* SEC-03: CENTER PANEL - 3D Three.js Interactive Sector Canvas */}
-        <section
-          style={{ width: `${colWidths.center}%` }}
-          className="h-full flex-1 rounded-xl glass-hud border border-slate-800/80 flex flex-col relative overflow-hidden min-w-[240px]"
-        >
-          <SectorView3D
-            stars={stars}
-            selectedStar={selectedStar}
-            onSelectStar={(s) => {
-              setSelectedStar(s);
-              setSelectedPlanetIndex(0);
-            }}
-            activeFilter={activeFilter}
-            radiusLy={config.radiusLy}
+        </main>
+      ) : (
+        <main className="w-full flex-1 min-h-0 relative">
+          <EmbeddedAppView
+            title="Classic 2D Star System Simulator"
+            badge="2D Canvas Prototype"
+            description="Original 2D canvas procedural star generation & Hertzsprung-Russell evolution track"
+            src="/apps/classic-simulator.html"
+            onBackToSimulator={() => setActiveApp('sector-3d')}
           />
-        </section>
-
-        {/* DRAGGABLE RESIZE DIVIDER 2 */}
-        <div
-          onMouseDown={() => startDrag('right')}
-          onDoubleClick={resetColWidths}
-          title="Drag horizontally to resize Center & Right panels • Double-click to reset"
-          className="w-2 hover:w-2.5 h-full cursor-col-resize flex items-center justify-center group z-30 transition-all flex-shrink-0 px-0.5"
-        >
-          <div className="w-1 h-12 bg-slate-700/80 group-hover:bg-cyan-400 group-hover:h-20 group-hover:w-1.5 rounded-full transition-all shadow-sm" />
-        </div>
-
-        {/* SEC-04 through SEC-09: RIGHT PANEL - Deep Stellar & Planetary System Inspector */}
-        <div
-          style={{ width: `${colWidths.right}%` }}
-          className="h-full flex flex-col min-w-[280px] flex-shrink-0"
-        >
-          <StellarInspector
-            selectedStar={selectedStar}
-            onScrubProgress={handleScrubProgress}
-            selectedPlanetIndex={selectedPlanetIndex}
-            onSelectPlanet={setSelectedPlanetIndex}
-          />
-        </div>
-      </main>
+        </main>
+      )}
     </div>
   );
 };
