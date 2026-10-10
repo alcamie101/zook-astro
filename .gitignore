@@ -34,4 +34,5 @@ pnpm-debug.log*
 
 # Private personal files & scratch
 family - Chat*
+**/family - Chat*
 scratch/
