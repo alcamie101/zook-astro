@@ -103,61 +103,298 @@ export const AstroArchitectCanvas3D: React.FC<Props> = ({
     scene.add(orreryGroupRef.current);
     scene.add(hyperlanesGroupRef.current);
 
-    // Background Galactic Starfield & Dust
-    const dustCount = 3500;
-    const dustGeo = new THREE.BufferGeometry();
-    const dustPositions = new Float32Array(dustCount * 3);
-    const dustColors = new Float32Array(dustCount * 3);
+    // Soft circular star sprite texture with crisp optical core
+    const createStarTexture = () => {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      const ctx = c.getContext('2d')!;
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.25, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.45, 'rgba(240, 248, 255, 0.9)');
+      grad.addColorStop(0.7, 'rgba(180, 220, 255, 0.4)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(c);
+      tex.generateMipmaps = true;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      return tex;
+    };
 
-    for (let i = 0; i < dustCount; i++) {
-      // Logarithmic spiral galaxy distribution
-      const arm = i % 2 === 0 ? 0 : Math.PI;
-      const dist = Math.pow(Math.random(), 0.6) * 450;
-      const angle = dist * 0.02 + arm + (Math.random() - 0.5) * 0.6;
-      const x = Math.cos(angle) * dist + (Math.random() - 0.5) * 20;
-      const z = Math.sin(angle) * dist + (Math.random() - 0.5) * 20;
-      const y = (Math.random() - 0.5) * (30 * Math.exp(-dist / 200));
+    // Soft, ethereal organic fractal nebula cloud texture
+    const createNebulaCloudTexture = (centerHex: string, midHex: string, edgeHex: string) => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d')!;
+      ctx.clearRect(0, 0, 256, 256);
 
-      dustPositions[i * 3] = x;
-      dustPositions[i * 3 + 1] = y;
-      dustPositions[i * 3 + 2] = z;
+      const seedRng = [
+        { x: 128, y: 128, r: 100, a: 0.28 },
+        { x: 105, y: 110, r: 80, a: 0.20 },
+        { x: 155, y: 120, r: 85, a: 0.20 },
+        { x: 120, y: 150, r: 75, a: 0.16 },
+        { x: 145, y: 145, r: 70, a: 0.16 },
+        { x: 90, y: 140, r: 65, a: 0.14 },
+        { x: 165, y: 105, r: 60, a: 0.14 },
+      ];
 
-      // Color variation: Core warm gold -> Outer cyan/azure
-      const t = Math.min(1, dist / 400);
-      const col = new THREE.Color().lerpColors(
-        new THREE.Color(0xffd599),
-        new THREE.Color(0x5ca7ff),
-        t
-      );
-      dustColors[i * 3] = col.r;
-      dustColors[i * 3 + 1] = col.g;
-      dustColors[i * 3 + 2] = col.b;
+      seedRng.forEach(lobe => {
+        const grad = ctx.createRadialGradient(lobe.x, lobe.y, 0, lobe.x, lobe.y, lobe.r);
+        grad.addColorStop(0, centerHex);
+        grad.addColorStop(0.4, midHex);
+        grad.addColorStop(0.8, edgeHex);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+        ctx.globalAlpha = lobe.a;
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(lobe.x, lobe.y, lobe.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Feather outer perimeter seamlessly to 100% transparent zero alpha
+      const borderVignette = ctx.createRadialGradient(128, 128, 65, 128, 128, 128);
+      borderVignette.addColorStop(0, 'rgba(0,0,0,1)');
+      borderVignette.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.fillStyle = borderVignette;
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.globalCompositeOperation = 'source-over';
+
+      const texture = new THREE.CanvasTexture(c);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    };
+
+    const starTexture = createStarTexture();
+    const cyanNebulaTex = createNebulaCloudTexture('rgba(56, 189, 248, 0.25)', 'rgba(14, 116, 144, 0.10)', 'rgba(3, 105, 161, 0.02)');
+    const magentaNebulaTex = createNebulaCloudTexture('rgba(244, 63, 94, 0.25)', 'rgba(168, 85, 247, 0.10)', 'rgba(91, 33, 182, 0.02)');
+    const goldNebulaTex = createNebulaCloudTexture('rgba(251, 191, 36, 0.22)', 'rgba(217, 119, 6, 0.09)', 'rgba(180, 83, 9, 0.02)');
+    const violetNebulaTex = createNebulaCloudTexture('rgba(192, 132, 252, 0.20)', 'rgba(126, 34, 206, 0.08)', 'rgba(59, 7, 100, 0.02)');
+
+    // Volumetric 3D Nebular Cloud System - Delicate, translucent celestial gas filaments
+    const nebulaGroup = new THREE.Group();
+    scene.add(nebulaGroup);
+
+    interface ArchitectNebula {
+      mesh: THREE.Mesh;
+      baseRotSpeed: number;
+      orbitSpeed: number;
+      orbitRadius: number;
+      orbitAngle: number;
+    }
+    const nebulaClouds: ArchitectNebula[] = [];
+
+    const cloudDefs = [
+      { tex: goldNebulaTex, scale: 220, dist: 30, color: 0xffd28a, opacity: 0.10 },
+      { tex: violetNebulaTex, scale: 240, dist: 50, color: 0xc084fc, opacity: 0.08 },
+      { tex: magentaNebulaTex, scale: 260, dist: 120, color: 0xf43f5e, opacity: 0.09 },
+      { tex: cyanNebulaTex, scale: 260, dist: 140, color: 0x38bdf8, opacity: 0.09 },
+      { tex: violetNebulaTex, scale: 270, dist: 200, color: 0x9333ea, opacity: 0.07 },
+      { tex: cyanNebulaTex, scale: 280, dist: 240, color: 0x0284c7, opacity: 0.07 },
+      { tex: goldNebulaTex, scale: 230, dist: 160, color: 0xfbbf24, opacity: 0.08 },
+      { tex: magentaNebulaTex, scale: 250, dist: 220, color: 0xfb7185, opacity: 0.06 },
+    ];
+
+    cloudDefs.forEach((def, idx) => {
+      const mat = new THREE.MeshBasicMaterial({
+        map: def.tex,
+        color: new THREE.Color(def.color),
+        transparent: true,
+        opacity: def.opacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(def.scale, def.scale), mat);
+      const angle = (idx / cloudDefs.length) * Math.PI * 2;
+      const x = Math.cos(angle) * def.dist;
+      const z = Math.sin(angle) * def.dist;
+      const y = (Math.random() - 0.5) * 12;
+      plane.position.set(x, y, z);
+      plane.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.1;
+      plane.rotation.z = Math.random() * Math.PI * 2;
+      nebulaGroup.add(plane);
+
+      nebulaClouds.push({
+        mesh: plane,
+        baseRotSpeed: (Math.random() - 0.5) * 0.002,
+        orbitSpeed: 0.006 / (1 + def.dist * 0.01),
+        orbitRadius: def.dist,
+        orbitAngle: angle
+      });
+    });
+
+    // Background Ultra-Dense Fine Milky Way Starfield (140,000 particles)
+    const starCount = 140000;
+    const starGeo = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(starCount * 3);
+    const starColors = new Float32Array(starCount * 3);
+    const starSizes = new Float32Array(starCount);
+    const starAlphas = new Float32Array(starCount);
+
+    const denseClusters = [
+      { x: 20, z: 15, r: 16, col: 0xffedd5 },
+      { x: -22, z: -18, r: 14, col: 0xfef08a },
+      { x: 32, z: -25, r: 18, col: 0xfcd34d },
+      { x: -28, z: 24, r: 16, col: 0xffedd5 },
+      { x: 85, z: 65, r: 20, col: 0x38bdf8 },
+      { x: -90, z: -70, r: 18, col: 0x60a5fa },
+      { x: 135, z: -95, r: 22, col: 0x38bdf8 },
+      { x: -130, z: 110, r: 20, col: 0x93c5fd },
+      { x: 70, z: -125, r: 16, col: 0xf43f5e },
+      { x: -75, z: 135, r: 18, col: 0xf43f5e },
+      { x: 170, z: 85, r: 24, col: 0xffffff },
+      { x: -175, z: -80, r: 22, col: 0xfef08a },
+    ];
+
+    for (let i = 0; i < starCount; i++) {
+      let x = 0, y = 0, z = 0;
+      let col = new THREE.Color();
+      let isBulge = false;
+
+      const sectorRoll = Math.random();
+
+      if (sectorRoll < 0.24) {
+        // [ZONE 0] Dense Star Clusters & Nurseries (~24% / ~33,600 stars)
+        const cl = denseClusters[i % denseClusters.length];
+        const offset = Math.pow(Math.random(), 1.7) * cl.r;
+        const angle = Math.random() * Math.PI * 2;
+        x = cl.x + Math.cos(angle) * offset;
+        z = cl.z + Math.sin(angle) * offset;
+        y = (Math.random() - 0.5) * (cl.r * 0.45 * Math.exp(-offset / cl.r));
+
+        col.setHex(cl.col);
+        if (Math.random() < 0.25) col.lerp(new THREE.Color(0xffffff), 0.5);
+      } else if (sectorRoll < 0.48) {
+        // [ZONE A] Central Sgr A* Bulge (~24% / ~33,600 stars)
+        isBulge = true;
+        const dist = Math.pow(Math.random(), 1.7) * 52;
+        const angle = Math.random() * Math.PI * 2;
+        x = (Math.cos(angle) * dist) * 1.35;
+        z = Math.sin(angle) * dist;
+        y = (Math.random() - 0.5) * (16 * Math.exp(-dist / 30));
+
+        const rType = Math.random();
+        if (rType < 0.42) col.setHex(0xfef08a);
+        else if (rType < 0.75) col.setHex(0xfcd34d);
+        else col.setHex(0xfb923c);
+
+        if (dist < 18) col.lerp(new THREE.Color(0xfff7ed), 0.75);
+      } else if (sectorRoll < 0.88) {
+        // [ZONE B] 4 Logarithmic Spiral Arm Spines (~40% / ~56,000 stars)
+        const armIdx = i % 4;
+        const armBase = armIdx * (Math.PI / 2);
+        const dist = 20 + Math.pow(Math.random(), 0.65) * 420;
+        const spiralAngle = Math.log(dist / 16) * 2.1 + armBase;
+        const dispersion = (Math.random() - 0.5) * (0.16 + dist * 0.0004);
+        const angle = spiralAngle + dispersion;
+        const rScatter = (Math.random() - 0.5) * (6 + dist * 0.06);
+        const r = Math.max(8, dist + rScatter);
+
+        x = Math.cos(angle) * r;
+        z = Math.sin(angle) * r;
+
+        const scaleHeight = 4.0 * Math.exp(-r / 220) + 1.5;
+        y = (Math.random() - 0.5) * scaleHeight * 2;
+
+        const pType = Math.random();
+        if (pType < 0.10) col.setHex(0xf43f5e);
+        else if (pType < 0.40) col.setHex(0x38bdf8);
+        else if (pType < 0.70) col.setHex(0xffffff);
+        else if (pType < 0.88) col.setHex(0xfef08a);
+        else col.setHex(0xfb923c);
+      } else {
+        // [ZONE C] Diffuse Disk River (~12% / ~16,800 stars)
+        const dist = 12 + Math.pow(Math.random(), 0.70) * 440;
+        const angle = Math.random() * Math.PI * 2;
+        x = Math.cos(angle) * dist;
+        z = Math.sin(angle) * dist;
+        y = (Math.random() - 0.5) * (8.0 * Math.exp(-dist / 240) + 2.2);
+
+        const dType = Math.random();
+        if (dType < 0.55) col.setHex(0xffffff);
+        else if (dType < 0.82) col.setHex(0xbae6fd);
+        else col.setHex(0xfef08a);
+      }
+
+      starPositions[i * 3] = x;
+      starPositions[i * 3 + 1] = y;
+      starPositions[i * 3 + 2] = z;
+
+      starColors[i * 3] = col.r;
+      starColors[i * 3 + 1] = col.g;
+      starColors[i * 3 + 2] = col.b;
+
+      // Fine Star Size Hierarchy (Matching Homepage precision)
+      const tierRoll = Math.random();
+      let baseSize: number;
+      let alpha: number;
+
+      if (tierRoll < 0.78) {
+        baseSize = 0.85 + Math.random() * 0.50;
+        alpha = 0.75 + Math.random() * 0.25;
+      } else if (tierRoll < 0.95) {
+        baseSize = 1.5 + Math.random() * 0.8;
+        alpha = 0.88 + Math.random() * 0.12;
+      } else {
+        baseSize = 2.6 + Math.random() * 1.3;
+        alpha = 1.0;
+      }
+
+      if (isBulge) {
+        alpha = 1.0;
+        baseSize *= 1.12;
+      }
+
+      starSizes[i] = baseSize;
+      starAlphas[i] = alpha;
     }
 
-    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
-    dustGeo.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starGeo.setAttribute('aColor', new THREE.BufferAttribute(starColors, 3));
+    starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSizes, 1));
+    starGeo.setAttribute('aAlpha', new THREE.BufferAttribute(starAlphas, 1));
 
-    const dustMat = new THREE.PointsMaterial({
-      size: 2.2,
-      vertexColors: true,
+    const starShaderMat = new THREE.ShaderMaterial({
+      uniforms: {
+        pointTexture: { value: starTexture }
+      },
+      vertexShader: `
+        attribute vec3 aColor;
+        attribute float aSize;
+        attribute float aAlpha;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vColor = aColor;
+          vAlpha = aAlpha;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = aSize * (240.0 / -mvPosition.z);
+          gl_PointSize = clamp(gl_PointSize, 0.7, 4.0);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D pointTexture;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vec4 tex = texture2D(pointTexture, gl_PointCoord);
+          gl_FragColor = vec4(vColor, 1.0) * tex.a * vAlpha;
+        }
+      `,
       transparent: true,
-      opacity: 0.75,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
     });
-    const dustParticles = new THREE.Points(dustGeo, dustMat);
-    scene.add(dustParticles);
 
-    // Galactic Core Glow Disk
-    const coreGeo = new THREE.SphereGeometry(18, 32, 32);
-    const coreMat = new THREE.MeshBasicMaterial({
-      color: 0xffe2aa,
-      transparent: true,
-      opacity: 0.35,
-      blending: THREE.AdditiveBlending
-    });
-    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-    coreMesh.scale.set(2.5, 0.4, 2.5);
-    scene.add(coreMesh);
+    const galaxyPoints = new THREE.Points(starGeo, starShaderMat);
+    scene.add(galaxyPoints);
 
     // Orbit Controls Setup (custom pan/zoom/rotate)
     let isUserDragging = false;
@@ -311,8 +548,16 @@ export const AstroArchitectCanvas3D: React.FC<Props> = ({
         timeRef.current += 0.015 * simSpeed;
       }
 
-      // Rotate galaxy dust gently
-      dustParticles.rotation.y = timeRef.current * 0.02;
+      // Rotate galaxy points gently
+      galaxyPoints.rotation.y = timeRef.current * 0.015;
+
+      // Organic orbit for nebulae
+      nebulaClouds.forEach((cloud) => {
+        cloud.orbitAngle += cloud.orbitSpeed * 0.015;
+        cloud.mesh.position.x = Math.cos(cloud.orbitAngle) * cloud.orbitRadius;
+        cloud.mesh.position.z = Math.sin(cloud.orbitAngle) * cloud.orbitRadius;
+        cloud.mesh.rotation.z += cloud.baseRotSpeed;
+      });
 
       // Update camera target based on spherical coordinates
       const cx = targetCamLook.current.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
@@ -344,6 +589,13 @@ export const AstroArchitectCanvas3D: React.FC<Props> = ({
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
+      starGeo.dispose();
+      starShaderMat.dispose();
+      starTexture.dispose();
+      cyanNebulaTex.dispose();
+      magentaNebulaTex.dispose();
+      goldNebulaTex.dispose();
+      violetNebulaTex.dispose();
     };
   }, []);
 
