@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Maximize2, RotateCcw, Eye, Play, Pause } from 'lucide-react';
 import { StarSystem } from '../../types/astrophysics';
 import { computePlanetPhysics } from '../../core/generation/planets';
 import { createPlanetShaderMaterial } from './PlanetShaderMaterial';
 import { createStarShaderMaterial } from './StarShaderMaterial';
 import { generateProceduralPlanetTextures } from '../../core/generation/planetTextures';
+import {
+  CircumstellarControlsOverlay,
+  CircumstellarCameraPresets,
+  createCoronaTexture,
+} from './circumstellar';
 
 interface CircumstellarView3DProps {
   selectedStar: StarSystem | null;
@@ -180,31 +184,6 @@ export const CircumstellarView3D: React.FC<CircumstellarView3DProps> = ({
       cameraTargetRef.current.set(0, 0, 0);
     }
     updateCameraPosition();
-  };
-
-  // Helper to generate soft radial star corona sprite texture matching star spectral color
-  const createCoronaTexture = (starColor: THREE.Color) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-      const r = Math.round(starColor.r * 255);
-      const g = Math.round(starColor.g * 255);
-      const b = Math.round(starColor.b * 255);
-
-      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      grad.addColorStop(0.18, `rgba(${r}, ${g}, ${b}, 0.85)`);
-      grad.addColorStop(0.45, `rgba(${r}, ${g}, ${b}, 0.35)`);
-      grad.addColorStop(0.75, `rgba(${r}, ${g}, ${b}, 0.08)`);
-      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 256, 256);
-    }
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
   };
 
   useEffect(() => {
@@ -779,178 +758,30 @@ export const CircumstellarView3D: React.FC<CircumstellarView3DProps> = ({
       onWheel={handleWheel}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Top Left Title & Controls Overlay */}
-      <div className="absolute top-2 left-2 z-20 flex flex-wrap items-center gap-1.5 pointer-events-auto">
-        <span className="text-[9px] font-mono text-cyan-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/80 shadow flex items-center gap-1">
-          <Eye className="w-3 h-3 text-emerald-400" />
-          Raytraced Solar Shadows
-        </span>
-
-        {/* Camera Preset Quick Buttons */}
-        <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded border border-slate-800 text-[8.5px] font-mono">
-          <button
-            onClick={() => setCameraPreset('top')}
-            className="px-1.5 py-0.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded"
-            title="Top-Down Polar View"
-          >
-            Top
-          </button>
-          <button
-            onClick={() => setCameraPreset('inclined')}
-            className="px-1.5 py-0.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded"
-            title="Inclined Perspective (45°)"
-          >
-            45°
-          </button>
-          <button
-            onClick={() => setCameraPreset('edge')}
-            className="px-1.5 py-0.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded"
-            title="Ecliptic Edge-On View"
-          >
-            Edge
-          </button>
-          <button
-            onClick={focusOnSun}
-            className={`px-1.5 py-0.5 rounded transition ${
-              focusedPlanet === null
-                ? 'bg-amber-950/80 text-amber-300 border border-amber-600/70 font-bold'
-                : 'hover:bg-slate-800 text-amber-400 font-semibold'
-            }`}
-            title="Full Screen Solar System View centered on the Sun"
-          >
-            ☀️ Sun
-          </button>
-          <button
-            onClick={() => {
-              if (focusedPlanet !== null) {
-                focusOnSun();
-              } else {
-                focusOnPlanet(selectedPlanetIndex);
-              }
-            }}
-            className={`px-1.5 py-0.5 rounded transition ${
-              focusedPlanet !== null
-                ? 'bg-cyan-500 text-slate-950 font-bold shadow'
-                : 'hover:bg-slate-800 text-cyan-400 font-bold'
-            }`}
-            title={
-              focusedPlanet !== null
-                ? 'Unlock Camera / Return to Overview'
-                : 'Focus & Zoom on Active Planet'
-            }
-          >
-            {focusedPlanet !== null ? 'Tracking' : 'Target'}
-          </button>
-          <button
-            onClick={() => {
-              unfocusPlanet();
-              setCameraPreset('inclined');
-            }}
-            className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded"
-            title="Reset to System Overview"
-          >
-            <RotateCcw className="w-3 h-3" />
-          </button>
-        </div>
-
-        {/* Active Focused Planet Badge with One-Click Exit & Sun Click Guidance */}
-        {focusedPlanet !== null && selectedStar?.planets[focusedPlanet] && (
-          <div className="flex items-center gap-1.5 bg-cyan-950/95 text-cyan-200 px-2 py-0.5 rounded border border-cyan-500/80 shadow text-[9px] font-mono">
-            <span
-              className="w-2 h-2 rounded-full ring-1 ring-cyan-400"
-              style={{ backgroundColor: selectedStar.planets[focusedPlanet].color }}
-            />
-            <span className="font-bold">{selectedStar.planets[focusedPlanet].name}</span>
-            <span className="text-cyan-400 hidden sm:inline">
-              ({selectedStar.planets[focusedPlanet].type})
-            </span>
-            <span className="text-amber-400 font-semibold text-[8.5px] border-l border-cyan-800 pl-1.5 ml-0.5 hidden md:inline">
-              Click Sun to exit
-            </span>
-            <button
-              onClick={unfocusPlanet}
-              className="ml-1 px-1.5 py-0.2 bg-cyan-900/80 hover:bg-rose-900 hover:text-rose-200 rounded text-cyan-300 transition text-[8.5px]"
-              title="Return to System Overview (or click on the Sun)"
-            >
-              Exit Focus
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Top Left Title & Camera Presets Overlay */}
+      <CircumstellarCameraPresets
+        onSetCameraPreset={setCameraPreset}
+        onFocusSun={focusOnSun}
+        onToggleActivePlanetFocus={() => {
+          if (focusedPlanet !== null) {
+            focusOnSun();
+          } else {
+            focusOnPlanet(selectedPlanetIndex);
+          }
+        }}
+        focusedPlanet={focusedPlanet}
+        selectedStar={selectedStar}
+      />
 
       {/* Top Right Controls: Play/Pause, Speed Slider, Presets, and Blow Up */}
-      <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 pointer-events-auto bg-slate-950/85 backdrop-blur-md px-2 py-1 rounded-lg border border-slate-800/90 shadow-xl text-xs font-mono">
-        {/* Play / Pause Button */}
-        <button
-          onClick={togglePlay}
-          className={`px-2 py-1 rounded border flex items-center gap-1 text-[11px] font-mono shadow transition select-none ${
-            isPlaying
-              ? 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700'
-              : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border-emerald-600 animate-pulse font-bold'
-          }`}
-          title={isPlaying ? 'Pause 3D Orbits (Space)' : 'Resume 3D Orbits (Space)'}
-        >
-          {isPlaying ? (
-            <>
-              <Pause className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Pause</span>
-            </>
-          ) : (
-            <>
-              <Play className="w-3.5 h-3.5 fill-current text-emerald-400" />
-              <span>Resume</span>
-            </>
-          )}
-        </button>
-
-        {/* Orbit Speed Slider with Slow-Down Capability */}
-        <div className="flex items-center gap-1.5 border-l border-slate-800 pl-2">
-          <span className="text-[10px] text-slate-400 select-none">Speed:</span>
-          <input
-            type="range"
-            min="0.05"
-            max="3.0"
-            step="0.05"
-            value={speed}
-            onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
-            className="w-14 sm:w-20 accent-cyan-400 h-1.5 bg-slate-800 rounded cursor-pointer"
-            title={`Orbit speed multiplier: ${speed.toFixed(2)}x (drag to slow down or speed up)`}
-          />
-          <span className="text-[10px] text-cyan-400 font-bold tabular-nums w-8 text-right select-none">
-            {speed.toFixed(2)}x
-          </span>
-
-          {/* Speed Presets */}
-          <div className="flex items-center gap-0.5 ml-0.5">
-            {[0.2, 1.0, 2.5].map((preset) => (
-              <button
-                key={preset}
-                onClick={() => handleSpeedChange(preset)}
-                className={`px-1 py-0.5 text-[8.5px] rounded transition ${
-                  Math.abs(speed - preset) < 0.05
-                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-700/80 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
-                title={`Set speed to ${preset}x (${preset < 1 ? 'Slow Motion' : preset === 1 ? 'Real-Time' : 'Fast'})`}
-              >
-                {preset === 0.2 ? '0.2x' : preset === 1 ? '1x' : `${preset}x`}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Blow Up 3D Button - Only shown when NOT expanded to eliminate duplicate Minimize button */}
-        {!isExpanded && onToggleExpand && (
-          <button
-            onClick={onToggleExpand}
-            className="ml-1 px-2 py-1 rounded bg-indigo-900/90 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/50 text-[10px] font-mono shadow flex items-center gap-1 transition"
-            title="Blow Up / Expand 3D Solar System"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Blow Up 3D</span>
-          </button>
-        )}
-      </div>
+      <CircumstellarControlsOverlay
+        isPlaying={isPlaying}
+        onTogglePlay={togglePlay}
+        speed={speed}
+        onSpeedChange={handleSpeedChange}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
+      />
 
       {/* Bottom Floating Hint Overlay */}
       <div className="absolute bottom-1.5 left-2 right-2 z-10 flex justify-between items-center text-[8.5px] font-mono text-slate-500 pointer-events-none">

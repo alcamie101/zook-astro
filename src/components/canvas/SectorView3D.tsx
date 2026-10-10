@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { FilterCategory, StarSystem } from '../../types/astrophysics';
+import { SectorControlsOverlay, SectorTooltip } from './sector';
 
 interface SectorView3DProps {
   stars: StarSystem[];
@@ -366,58 +367,25 @@ export const SectorView3D: React.FC<SectorView3DProps> = ({
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* 3D Navigation Controls HUD */}
-      <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 pointer-events-auto">
-        <div className="flex items-center bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 text-[11px] font-mono text-slate-300 shadow">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2"></span>
-          Radius: <span className="ml-1 text-cyan-400 font-bold">{radiusLy} ly</span>
-          <span className="ml-2 text-[9px] text-slate-500 bg-slate-950 px-1 py-0.2 rounded border border-slate-800">
-            SEC-03
-          </span>
-        </div>
-        <button
-          onClick={() => {
-            sphericalRef.current.radius = Math.max(10, sphericalRef.current.radius * 0.8);
-            updateCameraPosition();
-          }}
-          className="w-7 h-7 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-white font-bold border border-slate-700 text-xs shadow flex items-center justify-center transition"
-          title="Zoom In"
-        >
-          +
-        </button>
-        <button
-          onClick={() => {
-            sphericalRef.current.radius = Math.min(radiusLy * 8, sphericalRef.current.radius * 1.25);
-            updateCameraPosition();
-          }}
-          className="w-7 h-7 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-white font-bold border border-slate-700 text-xs shadow flex items-center justify-center transition"
-          title="Zoom Out"
-        >
-          -
-        </button>
-        <button
-          onClick={handleResetCamera}
-          className="px-2 h-7 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-mono shadow transition"
-        >
-          Reset 3D
-        </button>
-      </div>
+      <SectorControlsOverlay
+        radiusLy={radiusLy}
+        onZoomIn={() => {
+          sphericalRef.current.radius = Math.max(10, sphericalRef.current.radius * 0.8);
+          updateCameraPosition();
+        }}
+        onZoomOut={() => {
+          sphericalRef.current.radius = Math.min(radiusLy * 8, sphericalRef.current.radius * 1.25);
+          updateCameraPosition();
+        }}
+        onResetCamera={handleResetCamera}
+      />
 
       {/* Hover Tooltip */}
       {hoveredStar && tooltipPos && (
-        <div
-          className="absolute z-30 pointer-events-none bg-slate-950/95 border border-cyan-500/60 rounded-lg p-2 text-xs shadow-2xl font-mono text-slate-200"
-          style={{ left: `${tooltipPos.x}px`, top: `${tooltipPos.y}px` }}
-        >
-          <div className="font-bold text-cyan-400 flex items-center gap-1.5 text-[11px]">
-            {hoveredStar.name}
-          </div>
-          <div className="text-[10px] text-slate-300">
-            {hoveredStar.starState.spectralMK} &bull; {hoveredStar.progenitorMass.toFixed(2)} M☉
-          </div>
-          <div className="text-[9.5px] text-emerald-400">
-            {hoveredStar.planets.length} Exoplanets {hoveredStar.hasHZPlanet ? '(HZ Life!)' : ''}
-          </div>
-        </div>
+        <SectorTooltip
+          hoveredStar={hoveredStar}
+          position={tooltipPos}
+        />
       )}
 
       {/* Bottom Footer Info */}

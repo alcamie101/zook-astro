@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   FilterCategory,
   SectorConfiguration,
@@ -11,6 +11,7 @@ import { Header } from './components/ui/Header';
 import { SectorControls } from './components/ui/SectorControls';
 import { SectorView3D } from './components/canvas/SectorView3D';
 import { StellarInspector } from './components/ui/StellarInspector';
+import { useResizableColumns } from './hooks/useResizableColumns';
 
 export const App: React.FC = () => {
   const [config, setConfig] = useState<SectorConfiguration>({
@@ -28,76 +29,8 @@ export const App: React.FC = () => {
   const [selectedPlanetIndex, setSelectedPlanetIndex] = useState<number>(0);
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all');
 
-  // Resizable columns width state (percentages)
-  const [colWidths, setColWidths] = useState(() => {
-    try {
-      const saved = localStorage.getItem('zook_astro_col_widths');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return { left: 23, center: 41, right: 36 };
-  });
-
-  const mainContainerRef = useRef<HTMLElement>(null);
-  const draggingDividerRef = useRef<'left' | 'right' | null>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!draggingDividerRef.current || !mainContainerRef.current) return;
-      const rect = mainContainerRef.current.getBoundingClientRect();
-      const totalWidth = rect.width;
-      if (totalWidth <= 0) return;
-
-      const mouseX = Math.max(0, Math.min(totalWidth, e.clientX - rect.left));
-      const mouseXPct = (mouseX / totalWidth) * 100;
-
-      if (draggingDividerRef.current === 'left') {
-        const newLeft = Math.max(14, Math.min(38, mouseXPct));
-        const newCenter = Math.max(20, 100 - newLeft - colWidths.right);
-        const updated = { left: newLeft, center: newCenter, right: colWidths.right };
-        setColWidths(updated);
-        try {
-          localStorage.setItem('zook_astro_col_widths', JSON.stringify(updated));
-        } catch {}
-      } else if (draggingDividerRef.current === 'right') {
-        const newRight = Math.max(20, Math.min(55, 100 - mouseXPct));
-        const newCenter = Math.max(20, 100 - colWidths.left - newRight);
-        const updated = { left: colWidths.left, center: newCenter, right: newRight };
-        setColWidths(updated);
-        try {
-          localStorage.setItem('zook_astro_col_widths', JSON.stringify(updated));
-        } catch {}
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (draggingDividerRef.current) {
-        draggingDividerRef.current = null;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [colWidths]);
-
-  const startDrag = (divider: 'left' | 'right') => {
-    draggingDividerRef.current = divider;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  };
-
-  const resetColWidths = () => {
-    const def = { left: 23, center: 41, right: 36 };
-    setColWidths(def);
-    try {
-      localStorage.setItem('zook_astro_col_widths', JSON.stringify(def));
-    } catch {}
-  };
+  // Resizable 3-column layout hook
+  const { colWidths, mainContainerRef, startDrag, resetColWidths } = useResizableColumns();
 
   // Sector Generation
   const handleRegenerate = useCallback((currentConfig = config) => {
