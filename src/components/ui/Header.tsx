@@ -51,9 +51,18 @@ export const Header: React.FC<HeaderProps> = ({
     >
       {/* Title & App Branding (clickable to Home) */}
       <div
+        role="button"
+        tabIndex={0}
         onClick={() => onSelectApp('home')}
-        className="flex items-center gap-2.5 cursor-pointer group"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelectApp('home');
+          }
+        }}
+        className="flex items-center gap-2.5 cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-lg p-1"
         title="Return to Astro Suite Showcase Home"
+        aria-label="ZOOK ASTRO Home: Return to Showcase"
       >
         <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
           <Compass className="w-5 h-5 text-white" />
@@ -75,9 +84,10 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Application Suite Navigation Switcher */}
-      <nav className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shadow-inner text-xs font-mono">
+      <nav aria-label="Application View Navigation" className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shadow-inner text-xs font-mono">
         <button
           onClick={() => onSelectApp('home')}
+          aria-current={activeApp === 'home' ? 'page' : undefined}
           className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
             activeApp === 'home'
               ? 'bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold shadow-md shadow-white/10'
@@ -91,6 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           onClick={() => onSelectApp('sector-3d')}
+          aria-current={activeApp === 'sector-3d' ? 'page' : undefined}
           className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
             activeApp === 'sector-3d'
               ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold shadow-md shadow-cyan-500/20'
@@ -104,6 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           onClick={() => onSelectApp('astro-architect')}
+          aria-current={activeApp === 'astro-architect' ? 'page' : undefined}
           className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition text-[11px] ${
             activeApp === 'astro-architect'
               ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold shadow-md shadow-amber-500/20'

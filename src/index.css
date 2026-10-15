@@ -1,9 +1,78 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --space-bg: #03050c;
   --card-bg: rgba(10, 15, 30, 0.90);
   --border-hud: rgba(56, 189, 248, 0.22);
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #38bdf8;
+  --scrollbar-track: #060914;
+}
+
+/* Modern Web Guidance: Standardized, performant scrollbars across all modern browsers */
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+/* Modern Web Guidance: Adapt scrollbar to high-contrast preferences */
+@media (prefers-contrast: more) {
+  * {
+    --scrollbar-thumb: #38bdf8;
+    --scrollbar-track: #020409;
+    scrollbar-color: #38bdf8 #020409;
+  }
+}
+
+/* WebKit / Safari legacy fallback */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+/* Modern Web Guidance: View Transitions API for seamless SPA navigation */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 250ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modern Web Guidance: Respect user reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Modern Web Guidance: Isolated Layout Containment for high INP responsiveness */
+.panel-containment {
+  contain: layout style;
+}
+
+/* Accessible focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
 }
 
 .glass-hud {
@@ -40,18 +109,3 @@ input[type=range]::-webkit-slider-thumb:hover {
   transform: scale(1.25);
 }
 
-/* Scrollbars */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: #060914;
-}
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
-}

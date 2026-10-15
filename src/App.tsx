@@ -38,6 +38,17 @@ export const App: React.FC = () => {
   // Resizable 3-column layout hook for 3D Sector Sim
   const { colWidths, mainContainerRef, startDrag, resetColWidths } = useResizableColumns();
 
+  // Modern Web Guidance: Native View Transitions API for seamless SPA navigation
+  const handleSelectApp = useCallback((nextApp: ActiveAppMode) => {
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      (document as any).startViewTransition(() => {
+        setActiveApp(nextApp);
+      });
+    } else {
+      setActiveApp(nextApp);
+    }
+  }, []);
+
   // Sector Generation
   const handleRegenerate = useCallback((currentConfig = config) => {
     const generated = generateSectorStars(currentConfig);
@@ -124,13 +135,20 @@ export const App: React.FC = () => {
         starCount={config.starCount}
         morphologyLabel={morphologyLabels[config.morphology] || 'Sector'}
         activeApp={activeApp}
-        onSelectApp={setActiveApp}
+        onSelectApp={handleSelectApp}
       />
+
+      {/* Accessible Screen Reader Announcer for Navigation */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {activeApp === 'home' && 'Viewing Observatory Homepage Showcase'}
+        {activeApp === 'sector-3d' && 'Viewing 3D Sector Simulator'}
+        {activeApp === 'astro-architect' && 'Viewing 3D Astro-Architect'}
+      </div>
 
       {/* Main Multi-App Viewport */}
       {activeApp === 'home' ? (
         <main className="w-full flex-1 min-h-0 relative rounded-xl overflow-hidden glass-hud border border-slate-800/80">
-          <ShowcaseHome onSelectApp={setActiveApp} />
+          <ShowcaseHome onSelectApp={handleSelectApp} />
         </main>
       ) : activeApp === 'sector-3d' ? (
         <main
@@ -140,7 +158,7 @@ export const App: React.FC = () => {
           {/* SEC-02: LEFT PANEL - Sector Controls */}
           <div
             style={{ width: `${colWidths.left}%` }}
-            className="h-full flex flex-col min-w-[210px] flex-shrink-0"
+            className="h-full flex flex-col min-w-[210px] flex-shrink-0 panel-containment"
           >
             <SectorControls
               config={config}
@@ -166,7 +184,7 @@ export const App: React.FC = () => {
           {/* SEC-03: CENTER PANEL - 3D Three.js Interactive Sector Canvas */}
           <section
             style={{ width: `${colWidths.center}%` }}
-            className="h-full flex-1 rounded-xl glass-hud border border-slate-800/80 flex flex-col relative overflow-hidden min-w-[240px]"
+            className="h-full flex-1 rounded-xl glass-hud border border-slate-800/80 flex flex-col relative overflow-hidden min-w-[240px] panel-containment"
           >
             <SectorView3D
               stars={stars}
@@ -193,7 +211,7 @@ export const App: React.FC = () => {
           {/* SEC-04 through SEC-09: RIGHT PANEL - Deep Stellar & Planetary System Inspector */}
           <div
             style={{ width: `${colWidths.right}%` }}
-            className="h-full flex flex-col min-w-[280px] flex-shrink-0"
+            className="h-full flex flex-col min-w-[280px] flex-shrink-0 panel-containment"
           >
             <StellarInspector
               selectedStar={selectedStar}
@@ -206,8 +224,8 @@ export const App: React.FC = () => {
       ) : (
         <main className="w-full flex-1 min-h-0 relative rounded-xl overflow-hidden glass-hud border border-slate-800/80">
           <AstroArchitectApp
-            onBackToSectorSim={() => setActiveApp('sector-3d')}
-            onGoHome={() => setActiveApp('home')}
+            onBackToSectorSim={() => handleSelectApp('sector-3d')}
+            onGoHome={() => handleSelectApp('home')}
           />
         </main>
       )}

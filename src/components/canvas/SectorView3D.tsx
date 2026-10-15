@@ -118,7 +118,9 @@ export const SectorView3D: React.FC<SectorView3DProps> = ({
 
     // 4. Animation Loop
     let animId: number;
+    let isRunning = true;
     const animate = () => {
+      if (!isRunning) return;
       animId = requestAnimationFrame(animate);
 
       if (selectionMarkerRef.current && cameraRef.current) {
@@ -128,6 +130,34 @@ export const SectorView3D: React.FC<SectorView3DProps> = ({
       renderer.render(scene, camera);
     };
     animate();
+
+    // Modern Web Guidance: Efficient background processing on tab switch
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        cancelAnimationFrame(animId);
+      } else {
+        if (!isRunning) {
+          isRunning = true;
+          animate();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Modern Web Guidance: WebGL context loss recovery
+    const canvasElement = renderer.domElement;
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      isRunning = false;
+      cancelAnimationFrame(animId);
+    };
+    const handleContextRestored = () => {
+      isRunning = true;
+      animate();
+    };
+    canvasElement.addEventListener('webglcontextlost', handleContextLost);
+    canvasElement.addEventListener('webglcontextrestored', handleContextRestored);
 
     // 5. Real-time Resize Observer for dynamic panel dragging
     const resizeObserver = new ResizeObserver(() => {
@@ -142,7 +172,11 @@ export const SectorView3D: React.FC<SectorView3DProps> = ({
     resizeObserver.observe(container);
 
     return () => {
+      isRunning = false;
       cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      canvasElement.removeEventListener('webglcontextlost', handleContextLost);
+      canvasElement.removeEventListener('webglcontextrestored', handleContextRestored);
       resizeObserver.disconnect();
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);

@@ -250,7 +250,7 @@ export const AstroArchitectApp: React.FC<Props> = ({ onBackToSectorSim, onGoHome
       <aside
         ref={sidebarContainerRef}
         style={{ width: `${sidebarWidth}px` }}
-        className="h-full flex flex-col flex-shrink-0 bg-slate-950/95 border-r border-slate-800/80 z-20 shadow-2xl overflow-hidden"
+        className="h-full flex flex-col flex-shrink-0 bg-slate-950/95 border-r border-slate-800/80 z-20 shadow-2xl overflow-hidden panel-containment"
       >
         {/* Header Bar */}
         <div className="p-3 border-b border-slate-800/80 flex items-center justify-between gap-2 bg-slate-900/60">
@@ -790,7 +790,7 @@ export const AstroArchitectApp: React.FC<Props> = ({ onBackToSectorSim, onGoHome
       </div>
 
       {/* RIGHT VIEWPORT: 3D Three.js Interactive Galaxy & Orrery Canvas */}
-      <main className="flex-1 h-full flex flex-col relative overflow-hidden">
+      <main className="flex-1 h-full flex flex-col relative overflow-hidden panel-containment">
         {/* Top 3D Control Ribbon */}
         <div className="h-11 px-4 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md flex items-center justify-between z-10 font-mono text-xs">
           {/* Mode Switcher */}

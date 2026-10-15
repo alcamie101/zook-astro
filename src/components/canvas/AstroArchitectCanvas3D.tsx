@@ -540,8 +540,10 @@ export const AstroArchitectCanvas3D: React.FC<Props> = ({
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
 
-    // Animation Loop
+    // Animation Loop with Modern Web Guidance: Efficient Background Processing
+    let isRunning = true;
     const animate = () => {
+      if (!isRunning) return;
       animFrameRef.current = requestAnimationFrame(animate);
 
       if (!isPaused) {
@@ -576,8 +578,40 @@ export const AstroArchitectCanvas3D: React.FC<Props> = ({
 
     animate();
 
-    return () => {
+    // Modern Web Guidance: Tab visibility change handling
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        cancelAnimationFrame(animFrameRef.current);
+      } else {
+        if (!isRunning) {
+          isRunning = true;
+          animate();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Modern Web Guidance: WebGL context loss recovery
+    const canvasElement = renderer.domElement;
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      isRunning = false;
       cancelAnimationFrame(animFrameRef.current);
+    };
+    const handleContextRestored = () => {
+      isRunning = true;
+      animate();
+    };
+    canvasElement.addEventListener('webglcontextlost', handleContextLost);
+    canvasElement.addEventListener('webglcontextrestored', handleContextRestored);
+
+    return () => {
+      isRunning = false;
+      cancelAnimationFrame(animFrameRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      canvasElement.removeEventListener('webglcontextlost', handleContextLost);
+      canvasElement.removeEventListener('webglcontextrestored', handleContextRestored);
       container.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);

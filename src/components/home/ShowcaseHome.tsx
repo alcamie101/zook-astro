@@ -456,11 +456,13 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
     window.addEventListener('resize', onResize);
 
-    // Animation Loop
+    // Animation Loop with Modern Web Guidance: Efficient Background Processing
     let animId = 0;
     let clock = new THREE.Clock();
+    let isRunning = true;
 
     const animate = () => {
+      if (!isRunning) return;
       animId = requestAnimationFrame(animate);
       const elapsed = clock.getElapsedTime();
 
@@ -486,8 +488,49 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
     animate();
 
-    return () => {
+    // Modern Web Guidance: Pause background processing when tab is hidden to save battery & CPU
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        cancelAnimationFrame(animId);
+        // Suspend Web Audio when tab is hidden
+        if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
+          audioCtxRef.current.suspend().catch(() => {});
+        }
+      } else {
+        if (!isRunning) {
+          isRunning = true;
+          clock.start();
+          animate();
+          // Resume Web Audio when user returns to tab
+          if (audioCtxRef.current && audioCtxRef.current.state === 'suspended' && !isAudioMuted) {
+            audioCtxRef.current.resume().catch(() => {});
+          }
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Modern Web Guidance: Handle WebGL context loss and restoration gracefully
+    const canvasElement = renderer.domElement;
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      isRunning = false;
       cancelAnimationFrame(animId);
+    };
+    const handleContextRestored = () => {
+      isRunning = true;
+      animate();
+    };
+    canvasElement.addEventListener('webglcontextlost', handleContextLost);
+    canvasElement.addEventListener('webglcontextrestored', handleContextRestored);
+
+    return () => {
+      isRunning = false;
+      cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      canvasElement.removeEventListener('webglcontextlost', handleContextLost);
+      canvasElement.removeEventListener('webglcontextrestored', handleContextRestored);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onResize);
       if (renderer.domElement && container.contains(renderer.domElement)) {
@@ -558,7 +601,10 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
     let animId = 0;
     let t = 0;
+    let isVisible = true;
+
     const animate = () => {
+      if (!isVisible) return;
       animId = requestAnimationFrame(animate);
       t += 0.02;
       planet.position.x = Math.cos(t) * 12;
@@ -569,8 +615,27 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     };
     animate();
 
+    // Modern Web Guidance: Pause when offscreen using IntersectionObserver
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const wasVisible = isVisible;
+          isVisible = entry.isIntersecting && !document.hidden;
+          if (isVisible && !wasVisible) {
+            animate();
+          } else if (!isVisible && wasVisible) {
+            cancelAnimationFrame(animId);
+          }
+        });
+      }, { threshold: 0.05 });
+      observer.observe(container);
+    }
+
     return () => {
+      isVisible = false;
       cancelAnimationFrame(animId);
+      if (observer) observer.disconnect();
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
@@ -631,7 +696,10 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
 
     let animId = 0;
     let t = 0;
+    let isVisible = true;
+
     const animate = () => {
+      if (!isVisible) return;
       animId = requestAnimationFrame(animate);
       t += 0.015;
       clusterGroup.rotation.y = t * 0.6;
@@ -641,8 +709,27 @@ export const ShowcaseHome: React.FC<Props> = ({ onSelectApp }) => {
     };
     animate();
 
+    // Modern Web Guidance: Pause when offscreen using IntersectionObserver
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const wasVisible = isVisible;
+          isVisible = entry.isIntersecting && !document.hidden;
+          if (isVisible && !wasVisible) {
+            animate();
+          } else if (!isVisible && wasVisible) {
+            cancelAnimationFrame(animId);
+          }
+        });
+      }, { threshold: 0.05 });
+      observer.observe(container);
+    }
+
     return () => {
+      isVisible = false;
       cancelAnimationFrame(animId);
+      if (observer) observer.disconnect();
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
